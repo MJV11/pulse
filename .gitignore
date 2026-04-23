@@ -1,0 +1,11 @@
+# Local environment — never commit real credentials
+.env
+
+# Supabase local dev artifacts
+supabase/.branches
+supabase/.temp
+
+# Frontend build
+node_modules
+dist
+
