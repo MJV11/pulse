@@ -17,15 +17,15 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   const token = authHeader.slice(7);
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabasePublishableKey = Deno.env.get('SUPABASE_PUBLISHABLE_KEY');
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
 
-  if (!supabaseUrl || !supabasePublishableKey) {
-    console.error('Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY environment variables');
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables');
     res.status(500).json({ error: { message: 'Server misconfiguration' } });
     return;
   }
 
-  const client = createClient(supabaseUrl, supabasePublishableKey, {
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
