@@ -2,6 +2,7 @@ import type { DiscoveryProfile } from '../../lib/data'
 
 interface ProfileCardProps {
   profile: DiscoveryProfile
+  onClick?: () => void
 }
 
 const GRADIENTS = [
@@ -31,12 +32,16 @@ function initials(name: string) {
  * When no photo URL is provided the card shows a gradient background with
  * large initials instead — used for real users from the discovery API.
  */
-export function ProfileCard({ profile }: ProfileCardProps) {
+export function ProfileCard({ profile, onClick }: ProfileCardProps) {
   const hasPhoto = !!profile.photo
 
   return (
     <div
-      className="relative rounded-[32px] overflow-hidden shadow-[0px_20px_50px_0px_rgba(217,4,41,0.1)] w-full max-w-[500px] aspect-[3/4]"
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
+      className={`relative rounded-[32px] overflow-hidden shadow-[0px_20px_50px_0px_rgba(217,4,41,0.1)] w-full max-w-[500px] aspect-[3/4] ${onClick ? 'cursor-pointer' : ''}`}
       style={!hasPhoto ? { background: gradientFor(profile.id) } : undefined}
     >
       {/* Photo or ghost initials */}
@@ -87,7 +92,10 @@ export function ProfileCard({ profile }: ProfileCardProps) {
           </div>
 
           {/* Info button */}
-          <button className="backdrop-blur-md bg-white/20 border border-white/30 rounded-full p-[9px] flex items-center justify-center">
+          <button
+            onClick={(e) => { e.stopPropagation(); onClick?.() }}
+            className="backdrop-blur-md bg-white/20 border border-white/30 rounded-full p-[9px] flex items-center justify-center"
+          >
             <img
               src="https://www.figma.com/api/mcp/asset/02447170-0ed5-4e8a-a9bf-dd1ce3a39019"
               alt="Info"

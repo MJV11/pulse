@@ -3,16 +3,18 @@ import { Sidebar } from '../components/layout/Sidebar'
 import { HeroSection } from '../components/profile/HeroSection'
 import { AboutMeCard } from '../components/profile/AboutMeCard'
 import { InterestsCard } from '../components/profile/InterestsCard'
-import { MediaGallery } from '../components/profile/MediaGallery'
+import { MediaGallery, getGalleryPublicUrl } from '../components/profile/MediaGallery'
 import { AccountSettings } from '../components/profile/AccountSettings'
 import { useProfile } from '../context/ProfileContext'
 import { useAuth } from '../context/AuthContext'
+import { useProfilePhotos } from '../hooks/useProfilePhotos'
 import { apiFetch } from '../lib/api'
 import type { UserProfile } from '../hooks/useProfile'
 
 export function ProfilePage() {
   const { profile, profileLoading: loading, refreshProfile: refresh } = useProfile()
   const { session } = useAuth()
+  const { photos, loading: photosLoading, addPhoto, removePhoto } = useProfilePhotos()
 
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -22,9 +24,8 @@ export function ProfilePage() {
   const [draftBio, setDraftBio] = useState('')
   const [draftSports, setDraftSports] = useState<string[]>([])
 
-  // Local avatar URL so it updates immediately after upload without a full refresh
-  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null | undefined>(undefined)
-  const avatarUrl = localAvatarUrl !== undefined ? localAvatarUrl : (profile?.avatar_url ?? null)
+  const firstPhotoUrl = photos.length > 0 ? getGalleryPublicUrl(photos[0].storage_path) : null
+  const userId = session?.user.id ?? ''
 
   function startEditing() {
     setDraftName(profile?.user_name ?? '')
@@ -64,7 +65,6 @@ export function ProfilePage() {
   const displayName = isEditing ? draftName : (profile?.user_name ?? null)
   const displayBio = isEditing ? draftBio : (profile?.bio ?? null)
   const displaySports = isEditing ? draftSports : (profile?.sports ?? [])
-  const userId = session?.user.id ?? ''
 
   return (
     <div className="flex min-h-screen bg-[#fbf8ff]">
@@ -99,13 +99,9 @@ export function ProfilePage() {
               <HeroSection
                 userName={displayName}
                 rating={profile?.rating ?? null}
-                avatarUrl={avatarUrl}
-                latitude={profile?.latitude ?? null}
-                longitude={profile?.longitude ?? null}
-                userId={userId}
+                photoUrl={firstPhotoUrl}
                 isEditing={isEditing}
                 onNameChange={setDraftName}
-                onAvatarUploaded={(url) => setLocalAvatarUrl(url)}
                 onEditClick={startEditing}
                 onSave={saveProfile}
                 onCancel={cancelEditing}
@@ -131,7 +127,13 @@ export function ProfilePage() {
                   onSportsChange={setDraftSports}
                   onEditClick={startEditing}
                 />
-                <MediaGallery userId={userId} />
+                <MediaGallery
+                  userId={userId}
+                  photos={photos}
+                  loading={photosLoading}
+                  addPhoto={addPhoto}
+                  removePhoto={removePhoto}
+                />
                 <AccountSettings />
               </div>
             </>

@@ -1,23 +1,24 @@
 import { useRef, useState } from 'react'
-import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { useProfilePhotos } from '../../hooks/useProfilePhotos'
+import type { ProfilePhoto } from '../../hooks/useProfilePhotos'
 import { PiImage, PiPlus, PiTrash, PiSpinner } from 'react-icons/pi'
 
 const MAX_PHOTOS = 9
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
-function getPublicUrl(storagePath: string): string {
+export function getGalleryPublicUrl(storagePath: string): string {
   return supabase.storage.from('gallery').getPublicUrl(storagePath).data.publicUrl
 }
 
 interface MediaGalleryProps {
   userId: string
+  photos: ProfilePhoto[]
+  loading: boolean
+  addPhoto: (storagePath: string) => Promise<ProfilePhoto>
+  removePhoto: (photoId: string) => Promise<void>
 }
 
-export function MediaGallery({ userId }: MediaGalleryProps) {
-  const { session } = useAuth()
-  const { photos, loading, addPhoto, removePhoto } = useProfilePhotos()
+export function MediaGallery({ userId, photos, loading, addPhoto, removePhoto }: MediaGalleryProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -25,13 +26,12 @@ export function MediaGallery({ userId }: MediaGalleryProps) {
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file || !session?.access_token) return
+    if (!file) return
 
     if (!ALLOWED_TYPES.includes(file.type)) {
       setUploadError('Please choose a JPG, PNG, WebP, or GIF image.')
       return
     }
-
     if (photos.length >= MAX_PHOTOS) {
       setUploadError(`Maximum ${MAX_PHOTOS} photos allowed.`)
       return
@@ -72,7 +72,6 @@ export function MediaGallery({ userId }: MediaGalleryProps) {
 
   return (
     <div className="col-span-3 flex flex-col gap-4">
-      {/* Section heading */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <PiImage size={18} className="text-[#dc2626]" />
@@ -93,7 +92,6 @@ export function MediaGallery({ userId }: MediaGalleryProps) {
         )}
       </div>
 
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -108,7 +106,6 @@ export function MediaGallery({ userId }: MediaGalleryProps) {
         </p>
       )}
 
-      {/* Grid */}
       {loading ? (
         <div className="grid grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -126,28 +123,27 @@ export function MediaGallery({ userId }: MediaGalleryProps) {
           </div>
           <div className="flex flex-col items-center gap-1">
             <span className="text-[#1d1a20] font-semibold text-sm">Add your first photo</span>
-            <span className="text-[#94a3b8] text-xs">JPG, PNG, WebP or GIF</span>
+            <span className="text-[#94a3b8] text-xs">JPG, PNG, WebP or GIF • First photo is used as your profile picture</span>
           </div>
         </button>
       ) : (
         <div className="grid grid-cols-4 gap-4">
-          {photos.map((photo) => (
+          {photos.map((photo, index) => (
             <GalleryItem
               key={photo.id}
-              src={getPublicUrl(photo.storage_path)}
+              src={getGalleryPublicUrl(photo.storage_path)}
+              isFirst={index === 0}
               isDeleting={deletingId === photo.id}
               onDelete={() => handleDelete(photo.id)}
             />
           ))}
 
-          {/* Upload in-progress placeholder */}
           {uploading && (
             <div className="bg-[#f1f5f9] rounded-2xl aspect-[3/4] flex items-center justify-center">
               <PiSpinner size={28} className="text-[#dc2626] animate-spin" />
             </div>
           )}
 
-          {/* Add more slot */}
           {canAddMore && !uploading && (
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -165,11 +161,12 @@ export function MediaGallery({ userId }: MediaGalleryProps) {
 
 interface GalleryItemProps {
   src: string
+  isFirst: boolean
   isDeleting: boolean
   onDelete: () => void
 }
 
-function GalleryItem({ src, isDeleting, onDelete }: GalleryItemProps) {
+function GalleryItem({ src, isFirst, isDeleting, onDelete }: GalleryItemProps) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -184,7 +181,13 @@ function GalleryItem({ src, isDeleting, onDelete }: GalleryItemProps) {
         className={`absolute inset-0 w-full h-full object-cover transition-opacity ${isDeleting ? 'opacity-40' : 'opacity-100'}`}
       />
 
-      {/* Hover overlay with delete button */}
+      {/* Profile picture badge on first photo */}
+      {isFirst && !hovered && (
+        <div className="absolute top-2 left-2 bg-black/50 backdrop-blur-sm rounded-lg px-2 py-0.5">
+          <span className="text-white text-[10px] font-semibold">Profile</span>
+        </div>
+      )}
+
       {(hovered || isDeleting) && (
         <div className="absolute inset-0 bg-black/30 flex items-start justify-end p-2">
           <button

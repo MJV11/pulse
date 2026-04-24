@@ -49,11 +49,10 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
 router.put('/me', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
 
-  const { user_name, bio, sports, avatar_url } = req.body as {
+  const { user_name, bio, sports } = req.body as {
     user_name?: string;
     bio?: string;
     sports?: string[];
-    avatar_url?: string;
   };
 
   if (sports !== undefined && !Array.isArray(sports)) {
@@ -70,7 +69,6 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
   if (user_name !== undefined) patch.user_name = user_name;
   if (bio !== undefined) patch.bio = bio;
   if (sports !== undefined) patch.sports = sports;
-  if (avatar_url !== undefined) patch.avatar_url = avatar_url;
 
   try {
     const { data, error } = await supabase
@@ -242,6 +240,34 @@ router.put('/location', requireAuth, async (req: Request, res: Response) => {
     res.json({ data: { latitude, longitude } });
   } catch (err) {
     console.error('Unexpected error in PUT /users/location:', err);
+    res.status(500).json({ error: { message: 'Internal server error' } });
+  }
+});
+
+/**
+ * GET /api/users/:userId/photos
+ * Returns the gallery photos for any user (public, authenticated read).
+ */
+router.get('/:userId/photos', requireAuth, async (req: Request, res: Response) => {
+  const { userId } = req.params;
+
+  try {
+    const { data, error } = await supabase
+      .from('profile_photos')
+      .select('id, storage_path, position, created_at')
+      .eq('user_id', userId)
+      .order('position', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching profile_photos for user:', JSON.stringify(error));
+      res.status(500).json({ error: { message: 'Failed to fetch photos', detail: error.message } });
+      return;
+    }
+
+    res.json({ data: data ?? [] });
+  } catch (err) {
+    console.error('Unexpected error in GET /users/:userId/photos:', err);
     res.status(500).json({ error: { message: 'Internal server error' } });
   }
 });

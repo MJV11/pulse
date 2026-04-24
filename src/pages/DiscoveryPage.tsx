@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { Sidebar } from '../components/layout/Sidebar'
 import { ProfileCard } from '../components/discovery/ProfileCard'
 import { ActionControls } from '../components/discovery/ActionControls'
+import { UserProfileModal } from '../components/discovery/UserProfileModal'
 import { useDiscovery } from '../hooks/useDiscovery'
 import type { NearbyUser } from '../hooks/useDiscovery'
 import type { DiscoveryProfile } from '../lib/data'
 import { DISCOVERY_BTN_FILTER } from '../lib/assets'
+import { supabase } from '../lib/supabase'
 
 function toProfile(user: NearbyUser): DiscoveryProfile {
   const miles = user.distance_miles
@@ -14,10 +16,14 @@ function toProfile(user: NearbyUser): DiscoveryProfile {
       ? 'Less than a mile away'
       : `${miles.toFixed(1)} ${miles === 1 ? 'mile' : 'miles'} away`
 
+  const photoUrl = user.first_photo_path
+    ? supabase.storage.from('gallery').getPublicUrl(user.first_photo_path).data.publicUrl
+    : undefined
+
   return {
     id: user.user_id,
     name: user.user_name ?? 'Unknown',
-    photo: undefined,
+    photo: photoUrl,
     distance: distanceLabel,
     verified: false,
     interests: user.sports ?? [],
@@ -32,6 +38,7 @@ export function DiscoveryPage() {
   const { users, loading, noLocation, error } = useDiscovery(50)
   const [index, setIndex] = useState(0)
   const [radiusMiles] = useState(50)
+  const [modalUser, setModalUser] = useState<NearbyUser | null>(null)
 
   const currentUser = users[index]
   const profile = currentUser ? toProfile(currentUser) : null
@@ -157,7 +164,10 @@ export function DiscoveryPage() {
                 <div className="absolute -top-3 right-0 bg-white rounded-full px-3 py-1 text-xs font-semibold text-[#64748b] shadow-sm">
                   {index + 1} / {users.length}
                 </div>
-                <ProfileCard profile={profile} />
+                <ProfileCard
+                  profile={profile}
+                  onClick={() => setModalUser(currentUser)}
+                />
                 <ActionControls
                   onLike={handleLike}
                   onDislike={handleDislike}
@@ -177,6 +187,17 @@ export function DiscoveryPage() {
           <img src={DISCOVERY_BTN_FILTER} alt="" className="w-[18px] h-[18px] object-contain" />
         </button>
       </main>
+
+      {/* User profile modal */}
+      {modalUser && (
+        <UserProfileModal
+          user={modalUser}
+          distanceLabel={toProfile(modalUser).distance}
+          onClose={() => setModalUser(null)}
+          onLike={handleLike}
+          onDislike={handleDislike}
+        />
+      )}
     </div>
   )
 }

@@ -8,6 +8,7 @@ export interface NearbyUser {
   bio: string | null
   sports: string[]
   rating: number | null
+  first_photo_path: string | null
   distance_miles: number
 }
 

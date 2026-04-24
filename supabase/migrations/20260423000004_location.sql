@@ -31,6 +31,7 @@ as $$
 $$;
 
 -- ── Helper: find nearby users within a radius ─────────────────────────────────
+DROP FUNCTION IF EXISTS public.nearby_users;
 create or replace function public.nearby_users(
   lat              float8,
   lng              float8,
@@ -38,12 +39,13 @@ create or replace function public.nearby_users(
   exclude_user_id  uuid    default null
 )
 returns table (
-  user_id        uuid,
-  user_name      text,
-  bio            text,
-  sports         text[],
-  rating         numeric,
-  distance_miles float8
+  user_id          uuid,
+  user_name        text,
+  bio              text,
+  sports           text[],
+  rating           numeric,
+  first_photo_path text,
+  distance_miles   float8
 )
 language sql
 stable
@@ -55,6 +57,13 @@ as $$
     ud.bio,
     ud.sports,
     ud.rating,
+    (
+      select pp.storage_path
+      from public.profile_photos pp
+      where pp.user_id = ud.user_id
+      order by pp.position asc, pp.created_at asc
+      limit 1
+    ) as first_photo_path,
     ST_Distance(
       ud.location,
       ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
@@ -75,17 +84,19 @@ $$;
 -- Wraps nearby_users so the API never has to parse a WKB geography value.
 -- Looks up the calling user's stored location via ST_X/ST_Y, then delegates
 -- to the existing nearby_users function.
+DROP FUNCTION IF EXISTS public.discovery_feed;
 create or replace function public.discovery_feed(
   p_user_id    uuid,
   radius_miles float8 default 50
 )
 returns table (
-  user_id        uuid,
-  user_name      text,
-  bio            text,
-  sports         text[],
-  rating         numeric,
-  distance_miles float8
+  user_id          uuid,
+  user_name        text,
+  bio              text,
+  sports           text[],
+  rating           numeric,
+  first_photo_path text,
+  distance_miles   float8
 )
 language plpgsql
 stable

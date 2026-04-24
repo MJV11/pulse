@@ -1,17 +1,17 @@
--- Returns a user's profile with the geography column unpacked into plain
--- lat/lng floats so the API never has to handle raw WKB values.
+-- Returns a user's public profile with location unpacked and first gallery photo path.
+DROP FUNCTION IF EXISTS public.get_user_profile;
 create or replace function public.get_user_profile(p_user_id uuid)
 returns table (
-  user_id    uuid,
-  user_name  text,
-  bio        text,
-  sports     text[],
-  rating     numeric,
-  avatar_url text,
-  latitude   float8,
-  longitude  float8,
-  created_at timestamptz,
-  updated_at timestamptz
+  user_id          uuid,
+  user_name        text,
+  bio              text,
+  sports           text[],
+  rating           numeric,
+  first_photo_path text,
+  latitude         float8,
+  longitude        float8,
+  created_at       timestamptz,
+  updated_at       timestamptz
 )
 language sql
 stable
@@ -23,7 +23,13 @@ as $$
     ud.bio,
     ud.sports,
     ud.rating,
-    ud.avatar_url,
+    (
+      select pp.storage_path
+      from public.profile_photos pp
+      where pp.user_id = ud.user_id
+      order by pp.position asc, pp.created_at asc
+      limit 1
+    ) as first_photo_path,
     ST_Y(ud.location::geometry) as latitude,
     ST_X(ud.location::geometry) as longitude,
     ud.created_at,
