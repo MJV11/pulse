@@ -22,6 +22,10 @@ export function ProfilePage() {
   const [draftBio, setDraftBio] = useState('')
   const [draftSports, setDraftSports] = useState<string[]>([])
 
+  // Local avatar URL so it updates immediately after upload without a full refresh
+  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null | undefined>(undefined)
+  const avatarUrl = localAvatarUrl !== undefined ? localAvatarUrl : (profile?.avatar_url ?? null)
+
   function startEditing() {
     setDraftName(profile?.user_name ?? '')
     setDraftBio(profile?.bio ?? '')
@@ -60,6 +64,7 @@ export function ProfilePage() {
   const displayName = isEditing ? draftName : (profile?.user_name ?? null)
   const displayBio = isEditing ? draftBio : (profile?.bio ?? null)
   const displaySports = isEditing ? draftSports : (profile?.sports ?? [])
+  const userId = session?.user.id ?? ''
 
   return (
     <div className="flex min-h-screen bg-[#fbf8ff]">
@@ -94,8 +99,13 @@ export function ProfilePage() {
               <HeroSection
                 userName={displayName}
                 rating={profile?.rating ?? null}
+                avatarUrl={avatarUrl}
+                latitude={profile?.latitude ?? null}
+                longitude={profile?.longitude ?? null}
+                userId={userId}
                 isEditing={isEditing}
                 onNameChange={setDraftName}
+                onAvatarUploaded={(url) => setLocalAvatarUrl(url)}
                 onEditClick={startEditing}
                 onSave={saveProfile}
                 onCancel={cancelEditing}
@@ -121,7 +131,7 @@ export function ProfilePage() {
                   onSportsChange={setDraftSports}
                   onEditClick={startEditing}
                 />
-                <MediaGallery />
+                <MediaGallery userId={userId} />
                 <AccountSettings />
               </div>
             </>

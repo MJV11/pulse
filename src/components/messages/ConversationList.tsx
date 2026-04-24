@@ -1,7 +1,5 @@
 import type { Conversation } from '../../lib/data'
 import { ConversationItem } from './ConversationItem'
-import { NewMatchesCarousel } from './NewMatchesCarousel'
-import { newMatches } from '../../lib/data'
 import { MSG_ICON_FILTER } from '../../lib/assets'
 
 interface ConversationListProps {
@@ -11,7 +9,7 @@ interface ConversationListProps {
 }
 
 /**
- * Left pane of the messages screen: new matches carousel + search + conversation list.
+ * Left pane of the messages screen: search + conversation list.
  */
 export function ConversationList({ conversations, activeId, onSelect }: ConversationListProps) {
   return (
@@ -24,8 +22,6 @@ export function ConversationList({ conversations, activeId, onSelect }: Conversa
             <img src={MSG_ICON_FILTER} alt="Filter" className="w-[18px] h-[18px] object-contain" />
           </button>
         </div>
-
-        <NewMatchesCarousel matches={newMatches} />
 
         {/* Search */}
         <div className="relative">

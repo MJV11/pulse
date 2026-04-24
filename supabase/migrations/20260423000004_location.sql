@@ -62,7 +62,7 @@ as $$
   from public.user_details ud
   where
     ud.location is not null
-    and (exclude_user_id is null or ud.user_id <> exclude_user_id)
+    -- and (exclude_user_id is null or ud.user_id <> exclude_user_id)
     and ST_DWithin(
       ud.location,
       ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
@@ -96,11 +96,11 @@ declare
   v_lng float8;
 begin
   select
-    ST_Y(location::geometry),
-    ST_X(location::geometry)
+    ST_Y(ud.location::geometry),
+    ST_X(ud.location::geometry)
   into v_lat, v_lng
-  from public.user_details
-  where user_id = p_user_id;
+  from public.user_details ud
+  where ud.user_id = p_user_id;
 
   -- User has no stored location yet — return empty result set
   if v_lat is null then

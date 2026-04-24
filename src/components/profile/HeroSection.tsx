@@ -1,3 +1,9 @@
+import { useRef, useState } from 'react'
+import { useAuth } from '../../context/AuthContext'
+import { supabase } from '../../lib/supabase'
+import { apiFetch } from '../../lib/api'
+import type { UserProfile } from '../../hooks/useProfile'
+import { useReverseGeocode } from '../../hooks/useReverseGeocode'
 import {
   PROFILE_COVER,
   PROFILE_ICON_LOCATION,
@@ -8,8 +14,13 @@ import {
 interface HeroSectionProps {
   userName: string | null
   rating: number | null
+  avatarUrl: string | null
+  latitude: number | null
+  longitude: number | null
+  userId: string
   isEditing: boolean
   onNameChange: (name: string) => void
+  onAvatarUploaded: (url: string) => void
   onEditClick: () => void
   onSave: () => void
   onCancel: () => void
@@ -36,15 +47,67 @@ function makeInitialsAvatar(name: string | null): string {
 export function HeroSection({
   userName,
   rating,
+  avatarUrl,
+  latitude,
+  longitude,
+  userId,
   isEditing,
   onNameChange,
+  onAvatarUploaded,
   onEditClick,
   onSave,
   onCancel,
   saving,
 }: HeroSectionProps) {
+  const { session } = useAuth()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const cityName = useReverseGeocode(latitude, longitude)
+
   const displayName = userName ?? 'Your Name'
-  const avatarSrc = makeInitialsAvatar(userName)
+  const avatarSrc = avatarUrl ?? makeInitialsAvatar(userName)
+
+  async function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !session?.access_token) return
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError('Please choose a JPG, PNG, WebP, or GIF image.')
+      return
+    }
+
+    setUploadingAvatar(true)
+    setUploadError(null)
+
+    try {
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const storagePath = `${userId}/avatar.${ext}`
+
+      const { error: storageError } = await supabase.storage
+        .from('avatars')
+        .upload(storagePath, file, { upsert: true, contentType: file.type })
+
+      if (storageError) throw new Error(storageError.message)
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(storagePath)
+
+      // Save the URL immediately — no need to wait for full profile save
+      await apiFetch<{ data: UserProfile }>('/users/me', session.access_token, {
+        method: 'PUT',
+        body: JSON.stringify({ avatar_url: publicUrl }),
+      })
+
+      onAvatarUploaded(publicUrl)
+    } catch (err) {
+      setUploadError((err as Error).message ?? 'Upload failed')
+    } finally {
+      setUploadingAvatar(false)
+      // Reset input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   return (
     <div className="bg-white border border-[rgba(254,242,242,0.5)] rounded-2xl shadow-[0px_8px_30px_0px_rgba(0,0,0,0.04)] overflow-hidden">
@@ -58,6 +121,15 @@ export function HeroSection({
         <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-transparent" />
       </div>
 
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={handleAvatarFileChange}
+      />
+
       {/* Profile info row */}
       <div className="px-[33px] pb-[33px] -mt-24 flex items-end justify-between">
         {/* Avatar + name */}
@@ -67,18 +139,27 @@ export function HeroSection({
             <img
               src={avatarSrc}
               alt={displayName}
-              className="w-[148px] h-[148px] rounded-2xl object-cover"
+              className={`w-[148px] h-[148px] rounded-2xl object-cover transition-opacity ${uploadingAvatar ? 'opacity-50' : 'opacity-100'}`}
             />
+            {uploadingAvatar && (
+              <div className="absolute inset-[6px] rounded-2xl flex items-center justify-center bg-black/10">
+                <svg className="animate-spin w-8 h-8 text-[#dc2626]" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </div>
+            )}
             <button
-              onClick={isEditing ? undefined : onEditClick}
-              className="absolute -bottom-2 -right-2"
-              aria-label="Edit photo"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="absolute -bottom-2 -right-2 disabled:opacity-60"
+              aria-label="Change profile photo"
             >
-              <img src={PROFILE_EDIT_CAMERA} alt="Edit" className="w-[42px] h-[42px] object-contain" />
+              <img src={PROFILE_EDIT_CAMERA} alt="" className="w-[42px] h-[42px] object-contain" />
             </button>
           </div>
 
-          {/* Name + rating */}
+          {/* Name + rating + location */}
           <div className="pb-2 flex flex-col gap-1.5">
             {isEditing ? (
               <input
@@ -110,10 +191,21 @@ export function HeroSection({
                 <span className="text-[#534342] text-sm font-medium">{rating.toFixed(1)}</span>
               </div>
             ) : (
+              <span className="text-[#94a3b8] text-sm">No rating yet</span>
+            )}
+
+            {/* Location */}
+            {(cityName != null || (latitude != null && longitude != null)) && (
               <div className="flex items-center gap-1">
                 <img src={PROFILE_ICON_LOCATION} alt="" className="w-3 h-[15px] object-contain" />
-                <span className="text-[#534342] text-base">No rating yet</span>
+                <span className="text-[#534342] text-base">
+                  {cityName ?? `${latitude!.toFixed(2)}, ${longitude!.toFixed(2)}`}
+                </span>
               </div>
+            )}
+
+            {uploadError && (
+              <p className="text-[#dc2626] text-xs font-medium mt-1">{uploadError}</p>
             )}
           </div>
         </div>
