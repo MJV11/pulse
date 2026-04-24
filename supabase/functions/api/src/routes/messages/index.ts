@@ -1,22 +1,15 @@
 // @deno-types="npm:@types/express@^4.17"
 import express, { Request, Response } from 'npm:express@4.18.2';
-import { createClient } from 'npm:@supabase/supabase-js@2';
 import { requireAuth } from '../../middlewares/auth.ts';
+import { getServiceClient } from '../../utils/supabase.ts';
 
 interface AuthenticatedRequest extends Request {
   user: { id: string; email?: string; [key: string]: unknown };
 }
 
-function getServiceClient() {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseSecretKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!supabaseUrl || !supabaseSecretKey) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-  }
-  return createClient(supabaseUrl, supabaseSecretKey, { auth: { persistSession: false } });
-}
-
 const router = express.Router();
+
+const supabase = getServiceClient();
 
 /**
  * GET /api/messages/conversations
@@ -27,7 +20,6 @@ router.get('/conversations', requireAuth, async (req: Request, res: Response) =>
   const { id: userId } = (req as AuthenticatedRequest).user;
 
   try {
-    const supabase = getServiceClient();
 
     // Fetch all messages involving this user, newest first
     const { data: msgs, error: msgErr } = await supabase
@@ -101,8 +93,6 @@ router.get('/:userId', requireAuth, async (req: Request, res: Response) => {
   const { userId: partnerId } = req.params;
 
   try {
-    const supabase = getServiceClient();
-
     const { data, error } = await supabase
       .from('messages')
       .select('id, from_user_id, to_user_id, content, reacted_with, created_at, modified_at')

@@ -1,22 +1,15 @@
 // @deno-types="npm:@types/express@^4.17"
 import express, { Request, Response } from 'npm:express@4.18.2';
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { getServiceClient } from '../../utils/supabase.ts';
 import { requireAuth } from '../../middlewares/auth.ts';
 
 interface AuthenticatedRequest extends Request {
   user: { id: string; email?: string; [key: string]: unknown };
 }
 
-function getServiceClient() {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseSecretKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!supabaseUrl || !supabaseSecretKey) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-  }
-  return createClient(supabaseUrl, supabaseSecretKey, { auth: { persistSession: false } });
-}
-
 const router = express.Router();
+
+const supabase = getServiceClient();
 
 /**
  * GET /api/discovery?miles=50
@@ -32,8 +25,6 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   const miles = Math.min(500, Math.max(1, Number(req.query.miles) || 50));
 
   try {
-    const supabase = getServiceClient();
-
     // Fetch the current user's stored location
     const { data: me, error: meErr } = await supabase
       .from('user_details')

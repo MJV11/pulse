@@ -1,7 +1,7 @@
 // @deno-types="npm:@types/express@^4.17"
 import express, { Request, Response } from 'npm:express@4.18.2';
-import { createClient } from 'npm:@supabase/supabase-js@2';
 import { requireAuth } from '../../middlewares/auth.ts';
+import { getServiceClient } from '../../utils/supabase.ts';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -11,18 +11,7 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-function getServiceClient() {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseSecretKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-  if (!supabaseUrl || !supabaseSecretKey) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
-  }
-
-  return createClient(supabaseUrl, supabaseSecretKey, {
-    auth: { persistSession: false },
-  });
-}
+const supabase = getServiceClient();
 
 const router = express.Router();
 
@@ -35,8 +24,6 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
 
   try {
-    const supabase = getServiceClient();
-
     // Fetch all match rows where the authenticated user is the initiator
     const { data: matchRows, error: matchError } = await supabase
       .from('matches')
@@ -57,7 +44,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
 
     // Fetch user_details for all matched users in one query
     const matchUserIds = matchRows.map((m) => m.match_user_id);
-    const { data: profiles, error: profileError } = await supabase
+    const { data: profiles, error: profileError } = await getServiceClient()
       .from('user_details')
       .select('user_id, user_name, bio, sports, rating')
       .in('user_id', matchUserIds);

@@ -1,6 +1,6 @@
 // @deno-types="npm:@types/express@^4.17"
 import express, { Request, Response } from 'npm:express@4.18.2';
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { getServiceClient } from '../../utils/supabase.ts';
 import { requireAuth } from '../../middlewares/auth.ts';
 
 interface AuthenticatedRequest extends Request {
@@ -11,21 +11,10 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-function getServiceClient() {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseSecretKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-  if (!supabaseUrl || !supabaseSecretKey) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
-  }
-
-  return createClient(supabaseUrl, supabaseSecretKey, {
-    auth: { persistSession: false },
-  });
-}
 
 const router = express.Router();
 
+const supabase = getServiceClient();
 /**
  * GET /api/users/me
  * Returns the authenticated user's profile from user_details.
@@ -35,7 +24,6 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
 
   try {
-    const supabase = getServiceClient();
     const { data, error } = await supabase
       .from('user_details')
       .select('*')
@@ -87,7 +75,6 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
   if (sports !== undefined) patch.sports = sports;
 
   try {
-    const supabase = getServiceClient();
     const { data, error } = await supabase
       .from('user_details')
       .upsert(patch, { onConflict: 'user_id' })
@@ -128,7 +115,6 @@ router.put('/location', requireAuth, async (req: Request, res: Response) => {
   }
 
   try {
-    const supabase = getServiceClient();
     const { error } = await supabase.rpc('update_user_location', {
       p_user_id: userId,
       p_lat: latitude,
