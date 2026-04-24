@@ -70,3 +70,44 @@ as $$
     )
   order by distance_miles asc;
 $$;
+
+
+-- Wraps nearby_users so the API never has to parse a WKB geography value.
+-- Looks up the calling user's stored location via ST_X/ST_Y, then delegates
+-- to the existing nearby_users function.
+create or replace function public.discovery_feed(
+  p_user_id    uuid,
+  radius_miles float8 default 50
+)
+returns table (
+  user_id        uuid,
+  user_name      text,
+  bio            text,
+  sports         text[],
+  rating         numeric,
+  distance_miles float8
+)
+language plpgsql
+stable
+security definer
+as $$
+declare
+  v_lat float8;
+  v_lng float8;
+begin
+  select
+    ST_Y(location::geometry),
+    ST_X(location::geometry)
+  into v_lat, v_lng
+  from public.user_details
+  where user_id = p_user_id;
+
+  -- User has no stored location yet — return empty result set
+  if v_lat is null then
+    return;
+  end if;
+
+  return query
+    select * from public.nearby_users(v_lat, v_lng, radius_miles, p_user_id);
+end;
+$$;

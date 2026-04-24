@@ -1,32 +1,65 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Sidebar } from '../components/layout/Sidebar'
 import { HeroSection } from '../components/profile/HeroSection'
 import { AboutMeCard } from '../components/profile/AboutMeCard'
 import { InterestsCard } from '../components/profile/InterestsCard'
 import { MediaGallery } from '../components/profile/MediaGallery'
 import { AccountSettings } from '../components/profile/AccountSettings'
-import { SetupProfileFlow } from '../components/profile/SetupProfileFlow'
-import { useProfile } from '../hooks/useProfile'
+import { useProfile } from '../context/ProfileContext'
+import { useAuth } from '../context/AuthContext'
+import { apiFetch } from '../lib/api'
 import type { UserProfile } from '../hooks/useProfile'
 
-/**
- * My Profile page — fetches real data from user_details.
- * Automatically prompts the setup wizard when no profile exists yet.
- */
 export function ProfilePage() {
-  const { profile, loading, refresh } = useProfile()
-  const [showEdit, setShowEdit] = useState(false)
+  const { profile, profileLoading: loading, refreshProfile: refresh } = useProfile()
+  const { session } = useAuth()
 
-  // Auto-trigger setup flow as soon as we know there's no profile
-  const needsSetup = !loading && profile === null
-  useEffect(() => {
-    if (needsSetup) setShowEdit(true)
-  }, [needsSetup])
+  const [isEditing, setIsEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  function handleFlowComplete(saved: UserProfile) {
-    refresh()
-    setShowEdit(false)
+  const [draftName, setDraftName] = useState('')
+  const [draftBio, setDraftBio] = useState('')
+  const [draftSports, setDraftSports] = useState<string[]>([])
+
+  function startEditing() {
+    setDraftName(profile?.user_name ?? '')
+    setDraftBio(profile?.bio ?? '')
+    setDraftSports(profile?.sports ?? [])
+    setError(null)
+    setIsEditing(true)
   }
+
+  function cancelEditing() {
+    setIsEditing(false)
+    setError(null)
+  }
+
+  async function saveProfile() {
+    if (!session?.access_token) return
+    setSaving(true)
+    setError(null)
+    try {
+      await apiFetch<{ data: UserProfile }>('/users/me', session.access_token, {
+        method: 'PUT',
+        body: JSON.stringify({
+          user_name: draftName.trim() || null,
+          bio: draftBio.trim() || null,
+          sports: draftSports,
+        }),
+      })
+      await refresh()
+      setIsEditing(false)
+    } catch (err) {
+      setError((err as Error).message ?? 'Something went wrong')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const displayName = isEditing ? draftName : (profile?.user_name ?? null)
+  const displayBio = isEditing ? draftBio : (profile?.bio ?? null)
+  const displaySports = isEditing ? draftSports : (profile?.sports ?? [])
 
   return (
     <div className="flex min-h-screen bg-[#fbf8ff]">
@@ -59,19 +92,34 @@ export function ProfilePage() {
           {!loading && profile !== undefined && (
             <>
               <HeroSection
-                userName={profile?.user_name ?? null}
+                userName={displayName}
                 rating={profile?.rating ?? null}
-                onEditClick={() => setShowEdit(true)}
+                isEditing={isEditing}
+                onNameChange={setDraftName}
+                onEditClick={startEditing}
+                onSave={saveProfile}
+                onCancel={cancelEditing}
+                saving={saving}
               />
+
+              {error && (
+                <div className="bg-[#fef2f2] border border-[#fecaca] rounded-2xl px-5 py-4">
+                  <p className="text-[#dc2626] font-medium text-sm">{error}</p>
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-6">
                 <AboutMeCard
-                  bio={profile?.bio ?? null}
-                  onEditClick={() => setShowEdit(true)}
+                  bio={displayBio}
+                  isEditing={isEditing}
+                  onBioChange={setDraftBio}
+                  onEditClick={startEditing}
                 />
                 <InterestsCard
-                  sports={profile?.sports ?? []}
-                  onEditClick={() => setShowEdit(true)}
+                  sports={displaySports}
+                  isEditing={isEditing}
+                  onSportsChange={setDraftSports}
+                  onEditClick={startEditing}
                 />
                 <MediaGallery />
                 <AccountSettings />
@@ -80,24 +128,6 @@ export function ProfilePage() {
           )}
         </div>
       </main>
-
-      {/* Setup / Edit flow */}
-      {showEdit && (
-        <SetupProfileFlow
-          mode={needsSetup ? 'setup' : 'edit'}
-          initialValues={
-            profile
-              ? {
-                  user_name: profile.user_name ?? undefined,
-                  bio: profile.bio ?? undefined,
-                  sports: profile.sports,
-                }
-              : undefined
-          }
-          onComplete={handleFlowComplete}
-          onDismiss={needsSetup ? undefined : () => setShowEdit(false)}
-        />
-      )}
     </div>
   )
 }

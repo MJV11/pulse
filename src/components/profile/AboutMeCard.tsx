@@ -2,13 +2,14 @@ import { PROFILE_ICON_HEART } from '../../lib/assets'
 
 interface AboutMeCardProps {
   bio: string | null
+  isEditing: boolean
+  onBioChange: (bio: string) => void
   onEditClick: () => void
 }
 
-/**
- * About Me bento card — bio text from user_details.
- */
-export function AboutMeCard({ bio, onEditClick }: AboutMeCardProps) {
+const MAX_BIO = 280
+
+export function AboutMeCard({ bio, isEditing, onBioChange, onEditClick }: AboutMeCardProps) {
   return (
     <div className="bg-white border border-[rgba(254,242,242,0.5)] rounded-2xl shadow-[0px_8px_30px_0px_rgba(0,0,0,0.04)] p-[33px] flex flex-col gap-4 col-span-2">
       {/* Section heading */}
@@ -17,15 +18,32 @@ export function AboutMeCard({ bio, onEditClick }: AboutMeCardProps) {
           <img src={PROFILE_ICON_HEART} alt="" className="w-[17px] h-[15px] object-contain" />
           <h2 className="text-[#1d1a20] font-bold text-xl">About Me</h2>
         </div>
-        <button
-          onClick={onEditClick}
-          className="text-[#dc2626] font-semibold text-sm hover:underline"
-        >
-          Edit
-        </button>
+        {!isEditing && (
+          <button
+            onClick={onEditClick}
+            className="text-[#dc2626] font-semibold text-sm hover:underline"
+          >
+            Edit
+          </button>
+        )}
       </div>
 
-      {bio ? (
+      {isEditing ? (
+        <div className="flex flex-col gap-1.5">
+          <textarea
+            value={bio ?? ''}
+            onChange={(e) => {
+              if (e.target.value.length <= MAX_BIO) onBioChange(e.target.value)
+            }}
+            placeholder="What makes you, you?"
+            rows={5}
+            className="w-full border border-[#fecaca] rounded-2xl px-4 py-3 text-[#1d1a20] text-base outline-none focus:ring-2 focus:ring-[#dc2626]/30 placeholder:text-[#94a3b8] resize-none leading-relaxed"
+          />
+          <span className="text-[#94a3b8] text-xs text-right">
+            {(bio ?? '').length}/{MAX_BIO}
+          </span>
+        </div>
+      ) : bio ? (
         <p className="text-[#534342] font-medium text-[18px] leading-[1.625]">{bio}</p>
       ) : (
         <button

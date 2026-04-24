@@ -25,40 +25,19 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   const miles = Math.min(500, Math.max(1, Number(req.query.miles) || 50));
 
   try {
-    // Fetch the current user's stored location
-    const { data: me, error: meErr } = await supabase
-      .from('user_details')
-      .select('location')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (meErr) {
-      console.error('Error fetching current user location:', meErr);
-      res.status(500).json({ error: { message: 'Failed to read your location' } });
-      return;
-    }
-
-    // No location stored yet — caller should POST location first
-    if (!me?.location) {
-      res.json({ data: [], reason: 'no_location' });
-      return;
-    }
-
-    // Call the PostGIS nearby_users function
-    const { data, error } = await supabase.rpc('nearby_users', {
-      lat: (me.location as { coordinates: [number, number] }).coordinates[1],
-      lng: (me.location as { coordinates: [number, number] }).coordinates[0],
+    const { data, error } = await supabase.rpc('discovery_feed', {
+      p_user_id: userId,
       radius_miles: miles,
-      exclude_user_id: userId,
     });
 
     if (error) {
-      console.error('Error calling nearby_users:', error);
+      console.error('Error calling discovery_feed:', error);
       res.status(500).json({ error: { message: 'Failed to fetch nearby users' } });
       return;
     }
 
-    res.json({ data: data ?? [] });
+    // discovery_feed returns an empty array when the user has no stored location
+    res.json({ data: data ?? [], ...(!data?.length && { reason: 'no_location' }) });
   } catch (err) {
     console.error('Unexpected error in GET /discovery:', err);
     res.status(500).json({ error: { message: 'Internal server error' } });

@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useAuth } from '../../context/AuthContext'
 import {
   PROFILE_ICON_BELL,
   PROFILE_ICON_CARD,
   PROFILE_ICON_CHEVRON,
   PROFILE_ICON_LOCK,
   PROFILE_ICON_SETTINGS,
+  PROFILE_NAV_SIGNOUT,
 } from '../../lib/assets'
 
 interface SettingRow {
@@ -52,10 +54,9 @@ const SETTINGS_ROWS = new Map<string, SettingRow>([
   ],
 ])
 
-/**
- * Account Settings bento card with toggle and chevron setting rows.
- */
 export function AccountSettings() {
+  const { signOut } = useAuth()
+  const [signingOut, setSigningOut] = useState(false)
   const [toggleState, setToggleState] = useState(
     new Map<string, boolean>([['notifications', true]])
   )
@@ -66,6 +67,11 @@ export function AccountSettings() {
       next.set(id, !prev.get(id))
       return next
     })
+  }
+
+  async function handleSignOut() {
+    setSigningOut(true)
+    await signOut()
   }
 
   return (
@@ -79,7 +85,7 @@ export function AccountSettings() {
       {/* Settings rows */}
       <div className="flex flex-col gap-6">
         {Array.from(SETTINGS_ROWS.values()).map((row) => (
-          <SettingRow
+          <SettingRowItem
             key={row.id}
             row={row}
             toggled={toggleState.get(row.id) ?? false}
@@ -87,17 +93,37 @@ export function AccountSettings() {
           />
         ))}
       </div>
+
+      {/* Divider */}
+      <div className="border-t border-[#f1f5f9]" />
+
+      {/* Sign Out */}
+      <button
+        onClick={handleSignOut}
+        disabled={signingOut}
+        className="flex items-center gap-4 p-4 rounded-2xl hover:bg-[#fef2f2]/40 transition-colors w-full text-left disabled:opacity-60"
+      >
+        <div className="bg-[#fef2f2] w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
+          <img src={PROFILE_NAV_SIGNOUT} alt="" className="w-5 h-5 object-contain" />
+        </div>
+        <div className="flex flex-col gap-px">
+          <span className="text-[#dc2626] font-semibold text-[14px]">
+            {signingOut ? 'Signing out…' : 'Sign Out'}
+          </span>
+          <span className="text-[#94a3b8] font-medium text-xs">Log out of your account</span>
+        </div>
+      </button>
     </div>
   )
 }
 
-interface SettingRowProps {
+interface SettingRowItemProps {
   row: SettingRow
   toggled: boolean
   onToggle: () => void
 }
 
-function SettingRow({ row, toggled, onToggle }: SettingRowProps) {
+function SettingRowItem({ row, toggled, onToggle }: SettingRowItemProps) {
   return (
     <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-[#fef2f2]/30 transition-colors">
       {/* Icon + text */}
