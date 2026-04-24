@@ -13,7 +13,7 @@ export function getServiceClient() {
  * Creates a client scoped to the authenticated user's JWT.
  * This sets auth.uid() so RLS policies (user_id = auth.uid()) are satisfied.
  */
-function getUserClient(token: string) {
+export function getUserClient(token: string) {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
   
