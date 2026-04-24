@@ -1,6 +1,6 @@
 // @deno-types="npm:@types/express@^4.17"
 import express, { Request, Response } from 'npm:express@4.18.2';
-import { getServiceClient } from '../../utils/supabase.ts';
+import { getServiceClient, getUserClient } from '../../utils/supabase.ts';
 import { requireAuth } from '../../middlewares/auth.ts';
 
 interface AuthenticatedRequest extends Request {
@@ -18,7 +18,7 @@ const supabase = getServiceClient();
 /**
  * GET /api/users/me
  * Returns the authenticated user's profile from user_details.
- * If no row exists yet, returns null for the profile fields.
+ * If no row exists yet, returns { data: null }.
  */
 router.get('/me', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
@@ -31,8 +31,8 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
       .maybeSingle();
 
     if (error) {
-      console.error('Error fetching user_details:', error);
-      res.status(500).json({ error: { message: 'Failed to fetch user profile' } });
+      console.error('Error fetching user_details:', JSON.stringify(error));
+      res.status(500).json({ error: { message: 'Failed to fetch user profile', detail: error.message } });
       return;
     }
 
@@ -46,10 +46,13 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
 /**
  * PUT /api/users/me
  * Upserts the authenticated user's profile.
+ * Uses the user's own JWT so auth.uid() is set and RLS is satisfied.
  * Accepted body fields: user_name, bio, sports
  */
 router.put('/me', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
+  const token = (req.headers.authorization as string).slice(7);
+
   const { user_name, bio, sports } = req.body as {
     user_name?: string;
     bio?: string;
@@ -61,10 +64,7 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
     return;
   }
 
-  if (
-    sports !== undefined &&
-    !sports.every((s) => typeof s === 'string')
-  ) {
+  if (sports !== undefined && !sports.every((s) => typeof s === 'string')) {
     res.status(400).json({ error: { message: '`sports` must contain only strings' } });
     return;
   }
@@ -75,6 +75,8 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
   if (sports !== undefined) patch.sports = sports;
 
   try {
+    // Use the user's own client — this sets auth.uid() so RLS is satisfied
+    const supabase = getUserClient(token);
     const { data, error } = await supabase
       .from('user_details')
       .upsert(patch, { onConflict: 'user_id' })
@@ -82,8 +84,8 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
       .single();
 
     if (error) {
-      console.error('Error upserting user_details:', error);
-      res.status(500).json({ error: { message: 'Failed to update user profile' } });
+      console.error('Error upserting user_details:', JSON.stringify(error));
+      res.status(500).json({ error: { message: 'Failed to update user profile', detail: error.message } });
       return;
     }
 
@@ -98,8 +100,6 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
  * PUT /api/users/location
  * Stores the authenticated user's current geographic coordinates.
  * Body: { latitude: number, longitude: number }
- * Uses the update_user_location DB function so the geography value is
- * built server-side rather than passing raw WKT through the REST layer.
  */
 router.put('/location', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
@@ -122,8 +122,8 @@ router.put('/location', requireAuth, async (req: Request, res: Response) => {
     });
 
     if (error) {
-      console.error('Error updating location:', error);
-      res.status(500).json({ error: { message: 'Failed to update location' } });
+      console.error('Error updating location:', JSON.stringify(error));
+      res.status(500).json({ error: { message: 'Failed to update location', detail: error.message } });
       return;
     }
 

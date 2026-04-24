@@ -8,3 +8,21 @@ export function getServiceClient() {
     }
     return createClient(supabaseUrl, supabaseSecretKey, { auth: { persistSession: false } });
 }
+
+/**
+ * Creates a client scoped to the authenticated user's JWT.
+ * This sets auth.uid() so RLS policies (user_id = auth.uid()) are satisfied.
+ */
+function getUserClient(token: string) {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables');
+    }
+  
+    return createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+  }
