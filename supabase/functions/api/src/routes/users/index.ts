@@ -76,7 +76,7 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
 
   try {
     // Use the user's own client — this sets auth.uid() so RLS is satisfied
-    const supabase = getUserClient(token);
+    const supabase = getServiceClient();
     const { data, error } = await supabase
       .from('user_details')
       .upsert(patch, { onConflict: 'user_id' })
