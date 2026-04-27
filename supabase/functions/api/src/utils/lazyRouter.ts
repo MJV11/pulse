@@ -40,6 +40,10 @@ async function getStaticRouter(config: LazyRouterConfig): Promise<unknown> {
       const { discoveryRouter } = await import('../routes/discovery/index.ts');
       return discoveryRouter;
     }
+    case 'likes': {
+      const { likesRouter } = await import('../routes/likes/index.ts');
+      return likesRouter;
+    }
     default:
       throw new Error(
         `Unknown router key: "${config.key}". Add it to getStaticRouter in utils/lazyRouter.ts.`,

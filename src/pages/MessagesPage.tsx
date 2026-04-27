@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Sidebar } from '../components/layout/Sidebar'
 import { ConversationList } from '../components/messages/ConversationList'
 import { ChatWindow } from '../components/messages/ChatWindow'
 import { useConversations } from '../hooks/useConversations'
+import { useMatches } from '../hooks/useMatches'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
 import type { Message } from '../lib/data'
@@ -43,9 +44,16 @@ function dbMessageToMessage(msg: DbMessage, currentUserId: string): Message {
 export function MessagesPage() {
   const { session } = useAuth()
   const { conversations, loading: convsLoading, refresh: refreshConversations } = useConversations()
+  const { matches } = useMatches()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [threads, setThreads] = useState<Map<string, Message[]>>(new Map())
   const [threadLoading, setThreadLoading] = useState(false)
+
+  // Matches from the last 7 days to show in the new-matches carousel
+  const recentMatches = useMemo(() => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
+    return matches.filter((m) => new Date(m.matched_at).getTime() >= cutoff)
+  }, [matches])
 
   // Auto-select the first conversation once loaded
   useEffect(() => {
@@ -124,6 +132,7 @@ export function MessagesPage() {
       <div className="ml-[288px] flex flex-1 overflow-hidden">
         <ConversationList
           conversations={conversations}
+          recentMatches={recentMatches}
           activeId={activeId ?? undefined}
           onSelect={(id) => setActiveId(id)}
         />

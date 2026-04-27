@@ -40,6 +40,12 @@ export const ROUTER_CONFIG: LazyRouterConfig[] = [
     importPath: '../routes/discovery/index.ts',
     exportName: 'discoveryRouter',
   },
+  {
+    path: '/api/likes',
+    key: 'likes',
+    importPath: '../routes/likes/index.ts',
+    exportName: 'likesRouter',
+  },
 ];
 
 export function validateRouterConfig(config: LazyRouterConfig[]): void {

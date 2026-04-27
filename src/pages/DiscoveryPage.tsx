@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Sidebar } from '../components/layout/Sidebar'
 import { ProfileCard } from '../components/discovery/ProfileCard'
 import { ActionControls } from '../components/discovery/ActionControls'
@@ -8,6 +9,28 @@ import type { NearbyUser } from '../hooks/useDiscovery'
 import type { DiscoveryProfile } from '../lib/data'
 import { DISCOVERY_BTN_FILTER } from '../lib/assets'
 import { supabase } from '../lib/supabase'
+import { apiFetch } from '../lib/api'
+import { useAuth } from '../context/AuthContext'
+
+interface LikeResponse {
+  data: {
+    matched: boolean
+    match_id?: string
+    user?: {
+      user_id: string
+      user_name: string | null
+      bio: string | null
+      sports: string[]
+      rating: number | null
+      first_photo_path: string | null
+    }
+  }
+}
+
+interface MatchCelebration {
+  userName: string
+  photoUrl: string | null
+}
 
 function toProfile(user: NearbyUser): DiscoveryProfile {
   const miles = user.distance_miles
@@ -33,26 +56,70 @@ function toProfile(user: NearbyUser): DiscoveryProfile {
 /**
  * Discovery (swipe) page — shows real nearby users from the API as swipeable
  * profile cards. Like/Dislike/Rewind navigate through the stack.
+ * On a mutual like the `process_like` RPC returns `matched: true` and we
+ * show a celebration overlay before advancing.
  */
 export function DiscoveryPage() {
+  const { session } = useAuth()
+  const navigate = useNavigate()
   const { users, loading, noLocation, error } = useDiscovery(50)
   const [index, setIndex] = useState(0)
   const [radiusMiles] = useState(50)
   const [modalUser, setModalUser] = useState<NearbyUser | null>(null)
+  const [celebration, setCelebration] = useState<MatchCelebration | null>(null)
+  const [liking, setLiking] = useState(false)
 
   const currentUser = users[index]
   const profile = currentUser ? toProfile(currentUser) : null
 
-  function handleLike() {
-    setIndex((i) => Math.min(i + 1, users.length))
-  }
+  const advance = useCallback(() => setIndex((i) => Math.min(i + 1, users.length)), [users.length])
+
+  const handleLike = useCallback(async () => {
+    if (!currentUser || !session?.access_token || liking) return
+    setLiking(true)
+    try {
+      const resp = await apiFetch<LikeResponse>(
+        '/likes',
+        session.access_token,
+        {
+          method: 'POST',
+          body: JSON.stringify({ to_user_id: currentUser.user_id }),
+        },
+      )
+      if (resp.data.matched && resp.data.user) {
+        const { user } = resp.data
+        const photoUrl = user.first_photo_path
+          ? supabase.storage.from('gallery').getPublicUrl(user.first_photo_path).data.publicUrl
+          : null
+        setCelebration({ userName: user.user_name ?? 'Someone', photoUrl })
+      } else {
+        advance()
+      }
+    } catch (err) {
+      console.error('Failed to record like:', err)
+      advance()
+    } finally {
+      setLiking(false)
+    }
+  }, [currentUser, session?.access_token, liking, advance])
+
+  const handleLikeFromModal = useCallback(async () => {
+    setModalUser(null)
+    await handleLike()
+  }, [handleLike])
 
   function handleDislike() {
-    setIndex((i) => Math.min(i + 1, users.length))
+    setModalUser(null)
+    advance()
   }
 
   function handleRewind() {
     setIndex((i) => Math.max(i - 1, 0))
+  }
+
+  function dismissCelebration() {
+    setCelebration(null)
+    advance()
   }
 
   return (
@@ -142,7 +209,6 @@ export function DiscoveryPage() {
           {/* Active card */}
           {!loading && profile && index < users.length && (
             <>
-              {/* Stack depth hint: ghost card behind */}
               {index + 1 < users.length && (
                 <div
                   className="absolute"
@@ -160,7 +226,6 @@ export function DiscoveryPage() {
               )}
 
               <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-[500px]">
-                {/* Counter badge */}
                 <div className="absolute -top-3 right-0 bg-white rounded-full px-3 py-1 text-xs font-semibold text-[#64748b] shadow-sm">
                   {index + 1} / {users.length}
                 </div>
@@ -194,9 +259,69 @@ export function DiscoveryPage() {
           user={modalUser}
           distanceLabel={toProfile(modalUser).distance}
           onClose={() => setModalUser(null)}
-          onLike={handleLike}
+          onLike={handleLikeFromModal}
           onDislike={handleDislike}
         />
+      )}
+
+      {/* Match celebration overlay */}
+      {celebration && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'linear-gradient(135deg, rgba(217,4,41,0.92) 0%, rgba(255,77,109,0.92) 100%)' }}
+        >
+          {/* Subtle radial glow */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.12)_0%,_transparent_70%)]" />
+
+          <div className="relative flex flex-col items-center gap-8 px-10 text-center">
+            {/* Heading */}
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-white/80 font-semibold text-lg tracking-wider uppercase">
+                It's a Match!
+              </span>
+              <span className="text-white font-extrabold text-4xl tracking-tight">
+                You & {celebration.userName}
+              </span>
+              <span className="text-white/70 text-sm mt-1">both liked each other</span>
+            </div>
+
+            {/* Avatar */}
+            <div className="w-36 h-36 rounded-[28px] overflow-hidden border-4 border-white/30 shadow-2xl">
+              {celebration.photoUrl ? (
+                <img
+                  src={celebration.photoUrl}
+                  alt={celebration.userName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center"
+                  style={{ background: 'rgba(255,255,255,0.2)' }}
+                >
+                  <span className="text-white font-extrabold text-5xl">
+                    {celebration.userName.slice(0, 1).toUpperCase()}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* CTAs */}
+            <div className="flex flex-col gap-3 w-full max-w-[280px]">
+              <button
+                onClick={() => navigate('/messages')}
+                className="w-full py-4 rounded-2xl bg-white text-[#d90429] font-bold text-base tracking-tight hover:bg-white/90 transition-colors"
+              >
+                Send a Message
+              </button>
+              <button
+                onClick={dismissCelebration}
+                className="w-full py-4 rounded-2xl border-2 border-white/40 text-white font-semibold text-base hover:bg-white/10 transition-colors"
+              >
+                Keep Swiping
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

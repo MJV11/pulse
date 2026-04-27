@@ -1,10 +1,10 @@
+import { supabase } from '../../lib/supabase'
 import type { MatchItem } from '../../hooks/useMatches'
 
 interface MatchCardProps {
   match: MatchItem
 }
 
-// Rotate through brand-adjacent gradients based on user_id hash
 const GRADIENTS = [
   'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)',
   'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
@@ -28,27 +28,35 @@ function initials(name: string | null) {
     .slice(0, 2)
 }
 
-/**
- * Match profile card — mirrors the discovery ProfileCard layout with a
- * gradient-initials background in place of a photo.
- */
 export function MatchCard({ match }: MatchCardProps) {
   const { user } = match
   const displayName = user.user_name ?? 'Unknown'
 
+  const photoUrl = user.first_photo_path
+    ? supabase.storage.from('gallery').getPublicUrl(user.first_photo_path).data.publicUrl
+    : null
+
   return (
     <div
       className="relative rounded-[32px] overflow-hidden shadow-[0px_20px_50px_0px_rgba(217,4,41,0.1)] w-full max-w-[360px] aspect-[3/4]"
-      style={{ background: gradientFor(user.user_id) }}
+      style={photoUrl ? undefined : { background: gradientFor(user.user_id) }}
     >
-      {/* Large initials centred on the card */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-white/30 font-extrabold text-[120px] leading-none select-none">
-          {initials(user.user_name)}
-        </span>
-      </div>
+      {/* Background: photo or gradient initials */}
+      {photoUrl ? (
+        <img
+          src={photoUrl}
+          alt={displayName}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-white/30 font-extrabold text-[120px] leading-none select-none">
+            {initials(user.user_name)}
+          </span>
+        </div>
+      )}
 
-      {/* Rating badge — top right */}
+      {/* Rating badge */}
       {user.rating != null && (
         <div className="absolute top-5 right-5 flex items-center gap-1 bg-black/30 backdrop-blur-md border border-white/20 rounded-full px-3 py-1">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -62,23 +70,20 @@ export function MatchCard({ match }: MatchCardProps) {
       )}
 
       {/* Bottom gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
       {/* Info overlay */}
       <div className="absolute bottom-0 left-0 right-0 px-7 pb-8 pt-6 flex flex-col gap-3">
-        {/* Name */}
         <h2 className="text-white font-extrabold text-[28px] tracking-tight leading-none">
           {displayName}
         </h2>
 
-        {/* Bio snippet */}
         {user.bio && (
           <p className="text-white/75 text-[13px] font-medium line-clamp-2 leading-snug">
             {user.bio}
           </p>
         )}
 
-        {/* Sports chips */}
         {user.sports.length > 0 && (
           <div className="flex gap-2 flex-wrap">
             {user.sports.map((sport) => (

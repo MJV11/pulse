@@ -17,18 +17,21 @@ const router = express.Router();
 
 /**
  * GET /api/matches
- * Returns all matches for the authenticated user, joined with each
- * matched user's profile from user_details.
+ * Returns all mutual matches for the authenticated user.
+ * Each item includes the matched user's profile and their first gallery photo.
+ *
+ * Matches are stored with canonical ordering (smaller UUID as user_id), so we
+ * query both directions with `.or()` and derive the "other" user from context.
  */
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
 
   try {
-    // Fetch all match rows where the authenticated user is the initiator
+    // Query matches where the user is on either side
     const { data: matchRows, error: matchError } = await supabase
       .from('matches')
-      .select('id, match_user_id, created_at, updated_at')
-      .eq('user_id', userId)
+      .select('id, user_id, match_user_id, created_at')
+      .or(`user_id.eq.${userId},match_user_id.eq.${userId}`)
       .order('created_at', { ascending: false });
 
     if (matchError) {
@@ -42,12 +45,16 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    // Fetch user_details for all matched users in one query
-    const matchUserIds = matchRows.map((m) => m.match_user_id);
-    const { data: profiles, error: profileError } = await getServiceClient()
+    // The "other" user in each match
+    const otherUserIds = matchRows.map((m) =>
+      m.user_id === userId ? m.match_user_id : m.user_id
+    );
+
+    // Fetch profiles for all matched users in one query
+    const { data: profiles, error: profileError } = await supabase
       .from('user_details')
       .select('user_id, user_name, bio, sports, rating')
-      .in('user_id', matchUserIds);
+      .in('user_id', otherUserIds);
 
     if (profileError) {
       console.error('Error fetching user_details for matches:', profileError);
@@ -55,20 +62,46 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    // Build a lookup map for O(1) profile access
+    // Fetch first gallery photo for each matched user
+    // Order by position then created_at; take the first per user in JS
+    const { data: photoRows, error: photoError } = await supabase
+      .from('profile_photos')
+      .select('user_id, storage_path')
+      .in('user_id', otherUserIds)
+      .order('position', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (photoError) {
+      console.error('Error fetching photos for matches:', photoError);
+      // Non-fatal — proceed without photos
+    }
+
     const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
 
-    const data = matchRows.map((m) => ({
-      match_id: m.id,
-      matched_at: m.created_at,
-      user: profileMap.get(m.match_user_id) ?? {
-        user_id: m.match_user_id,
-        user_name: null,
-        bio: null,
-        sports: [],
-        rating: null,
-      },
-    }));
+    // Build first-photo map (first occurrence per user after ordering)
+    const photoMap = new Map<string, string>();
+    for (const photo of (photoRows ?? [])) {
+      if (!photoMap.has(photo.user_id)) {
+        photoMap.set(photo.user_id, photo.storage_path);
+      }
+    }
+
+    const data = matchRows.map((m) => {
+      const otherId = m.user_id === userId ? m.match_user_id : m.user_id;
+      const profile = profileMap.get(otherId);
+      return {
+        match_id: m.id,
+        matched_at: m.created_at,
+        user: {
+          user_id: otherId,
+          user_name: profile?.user_name ?? null,
+          bio: profile?.bio ?? null,
+          sports: profile?.sports ?? [],
+          rating: profile?.rating ?? null,
+          first_photo_path: photoMap.get(otherId) ?? null,
+        },
+      };
+    });
 
     res.json({ data });
   } catch (err) {

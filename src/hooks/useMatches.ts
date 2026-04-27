@@ -8,6 +8,7 @@ export interface MatchedUser {
   bio: string | null
   sports: string[]
   rating: number | null
+  first_photo_path: string | null
 }
 
 export interface MatchItem {

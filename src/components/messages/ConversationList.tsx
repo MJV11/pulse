@@ -1,17 +1,20 @@
 import type { Conversation } from '../../lib/data'
+import type { MatchItem } from '../../hooks/useMatches'
 import { ConversationItem } from './ConversationItem'
+import { NewMatchesCarousel } from './NewMatchesCarousel'
 import { MSG_ICON_FILTER } from '../../lib/assets'
 
 interface ConversationListProps {
   conversations: Map<string, Conversation>
+  recentMatches: MatchItem[]
   activeId?: string
   onSelect: (id: string) => void
 }
 
 /**
- * Left pane of the messages screen: search + conversation list.
+ * Left pane of the messages screen: new-matches carousel + conversation list.
  */
-export function ConversationList({ conversations, activeId, onSelect }: ConversationListProps) {
+export function ConversationList({ conversations, recentMatches, activeId, onSelect }: ConversationListProps) {
   return (
     <div className="w-[384px] shrink-0 bg-white border-r border-[#f1f5f9] flex flex-col h-full">
       {/* Header */}
@@ -36,6 +39,11 @@ export function ConversationList({ conversations, activeId, onSelect }: Conversa
             className="w-full bg-[#f4f2ff] rounded-2xl pl-10 pr-4 py-[14px] text-[#6b7280] text-base placeholder:text-[#6b7280] outline-none border-none"
           />
         </div>
+
+        {/* Recent matches carousel — only shown when there are recent matches */}
+        {recentMatches.length > 0 && (
+          <NewMatchesCarousel matches={recentMatches} />
+        )}
       </div>
 
       {/* Conversation list */}
