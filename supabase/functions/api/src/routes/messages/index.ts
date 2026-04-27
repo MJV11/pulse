@@ -132,10 +132,10 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     res.status(400).json({ error: { message: '`content` must be a non-empty string' } });
     return;
   }
-  if (to_user_id === fromUserId) {
+  /** if (to_user_id === fromUserId) {
     res.status(400).json({ error: { message: 'Cannot send a message to yourself' } });
     return;
-  }
+  } */
 
   try {
     const supabase = getServiceClient();

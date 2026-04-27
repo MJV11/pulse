@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { MatchItem } from '../../hooks/useMatches'
 
@@ -29,6 +30,7 @@ function initials(name: string | null) {
 }
 
 export function MatchCard({ match }: MatchCardProps) {
+  const navigate = useNavigate()
   const { user } = match
   const displayName = user.user_name ?? 'Unknown'
 
@@ -36,9 +38,15 @@ export function MatchCard({ match }: MatchCardProps) {
     ? supabase.storage.from('gallery').getPublicUrl(user.first_photo_path).data.publicUrl
     : null
 
+  const openChat = () => {
+    navigate('/messages', { state: { partnerId: user.user_id } })
+  }
+
   return (
-    <div
-      className="relative rounded-[32px] overflow-hidden shadow-[0px_20px_50px_0px_rgba(217,4,41,0.1)] w-full max-w-[360px] aspect-[3/4]"
+    <button
+      type="button"
+      onClick={openChat}
+      className="relative rounded-[32px] overflow-hidden shadow-[0px_20px_50px_0px_rgba(217,4,41,0.1)] w-full max-w-[360px] aspect-[3/4] text-left transition-transform duration-200 hover:-translate-y-1 hover:shadow-[0px_24px_60px_0px_rgba(217,4,41,0.18)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d90429] focus-visible:ring-offset-2"
       style={photoUrl ? undefined : { background: gradientFor(user.user_id) }}
     >
       {/* Background: photo or gradient initials */}
@@ -97,6 +105,6 @@ export function MatchCard({ match }: MatchCardProps) {
           </div>
         )}
       </div>
-    </div>
+    </button>
   )
 }

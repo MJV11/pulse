@@ -9,18 +9,35 @@ interface ConversationListProps {
   recentMatches: MatchItem[]
   activeId?: string
   onSelect: (id: string) => void
+  onSelectMatch: (userId: string) => void
 }
 
 /**
- * Left pane of the messages screen: new-matches carousel + conversation list.
+ * Left pane of the messages screen.
+ * Layout (top → bottom):
+ *   1. New Matches carousel (if any recent matches)
+ *   2. Messages header + search bar
+ *   3. Conversation items
  */
-export function ConversationList({ conversations, recentMatches, activeId, onSelect }: ConversationListProps) {
+export function ConversationList({
+  conversations,
+  recentMatches,
+  activeId,
+  onSelect,
+  onSelectMatch,
+}: ConversationListProps) {
   return (
     <div className="w-[384px] shrink-0 bg-white border-r border-[#f1f5f9] flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-6 flex flex-col gap-6">
+
+      {/* ── New Matches (top section) ──────────────────────────────── */}
+      {recentMatches.length > 0 && (
+        <NewMatchesCarousel matches={recentMatches} onSelect={onSelectMatch} />
+      )}
+
+      {/* ── Messages header + search ───────────────────────────────── */}
+      <div className="px-6 py-5 flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-[#131b2e] text-base font-normal">Messages</h1>
+          <h1 className="text-[#131b2e] text-base font-semibold">Messages</h1>
           <button>
             <img src={MSG_ICON_FILTER} alt="Filter" className="w-[18px] h-[18px] object-contain" />
           </button>
@@ -36,17 +53,12 @@ export function ConversationList({ conversations, recentMatches, activeId, onSel
           <input
             type="text"
             placeholder="Search conversations..."
-            className="w-full bg-[#f4f2ff] rounded-2xl pl-10 pr-4 py-[14px] text-[#6b7280] text-base placeholder:text-[#6b7280] outline-none border-none"
+            className="w-full bg-[#f4f2ff] rounded-2xl pl-10 pr-4 py-[13px] text-[#6b7280] text-sm placeholder:text-[#6b7280] outline-none border-none"
           />
         </div>
-
-        {/* Recent matches carousel — only shown when there are recent matches */}
-        {recentMatches.length > 0 && (
-          <NewMatchesCarousel matches={recentMatches} />
-        )}
       </div>
 
-      {/* Conversation list */}
+      {/* ── Conversation list ──────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-2 flex flex-col gap-1">
         {Array.from(conversations.values()).map((conv) => (
           <ConversationItem
@@ -56,6 +68,10 @@ export function ConversationList({ conversations, recentMatches, activeId, onSel
             onClick={() => onSelect(conv.id)}
           />
         ))}
+
+        {conversations.size === 0 && (
+          <p className="text-center text-[#94a3b8] text-sm py-8">No conversations yet.</p>
+        )}
       </div>
     </div>
   )

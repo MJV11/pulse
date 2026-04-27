@@ -3,6 +3,7 @@ import type { MatchItem } from '../../hooks/useMatches'
 
 interface NewMatchesCarouselProps {
   matches: MatchItem[]
+  onSelect: (userId: string) => void
 }
 
 function initials(name: string | null) {
@@ -28,17 +29,15 @@ function gradientFor(userId: string) {
   return GRADIENTS[hash % GRADIENTS.length]
 }
 
-/**
- * Horizontal scroll row of new match avatars.
- * Only rendered when there are recent matches to show.
- */
-export function NewMatchesCarousel({ matches }: NewMatchesCarouselProps) {
+export function NewMatchesCarousel({ matches, onSelect }: NewMatchesCarouselProps) {
   if (matches.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-[#5c403a] font-medium text-xs tracking-[1.2px] uppercase">New Matches</p>
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+    <div className="px-6 pt-5 pb-4 flex flex-col gap-3 border-b border-[#f1f5f9]">
+      <p className="text-[#5c403a] font-semibold text-xs tracking-[1.4px] uppercase">
+        New Matches
+      </p>
+      <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-none">
         {matches.map((match) => {
           const { user } = match
           const photoUrl = user.first_photo_path
@@ -46,26 +45,32 @@ export function NewMatchesCarousel({ matches }: NewMatchesCarouselProps) {
             : null
 
           return (
-            <button key={match.match_id} className="flex flex-col items-center gap-[7px] shrink-0">
+            <button
+              key={match.match_id}
+              className="flex flex-col items-center gap-[6px] shrink-0 group"
+              onClick={() => onSelect(user.user_id)}
+            >
               <div className="relative">
                 {photoUrl ? (
                   <img
                     src={photoUrl}
                     alt={user.user_name ?? 'Match'}
-                    className="w-14 h-14 rounded-full object-cover border-2 border-[#ef4444]"
+                    className="w-[52px] h-[52px] rounded-full object-cover border-2 border-[#ef4444] group-hover:opacity-90 transition-opacity"
                   />
                 ) : (
                   <div
-                    className="w-14 h-14 rounded-full flex items-center justify-center border-2 border-[#ef4444]"
+                    className="w-[52px] h-[52px] rounded-full flex items-center justify-center border-2 border-[#ef4444] group-hover:opacity-90 transition-opacity"
                     style={{ background: gradientFor(user.user_id) }}
                   >
-                    <span className="text-white font-bold text-lg leading-none select-none">
+                    <span className="text-white font-bold text-base leading-none select-none">
                       {initials(user.user_name)}
                     </span>
                   </div>
                 )}
+                {/* Pulse ring on hover */}
+                <span className="absolute inset-0 rounded-full ring-2 ring-[#ef4444]/0 group-hover:ring-[#ef4444]/30 transition-all" />
               </div>
-              <span className="text-[#131b2e] font-medium text-xs max-w-[56px] truncate">
+              <span className="text-[#131b2e] font-medium text-[11px] max-w-[52px] truncate leading-none">
                 {user.user_name ?? 'Unknown'}
               </span>
             </button>
