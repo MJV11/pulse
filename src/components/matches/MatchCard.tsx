@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { MatchItem } from '../../hooks/useMatches'
+import { calculateAge } from '../../lib/age'
 
 interface MatchCardProps {
   match: MatchItem
@@ -33,6 +34,8 @@ export function MatchCard({ match }: MatchCardProps) {
   const navigate = useNavigate()
   const { user } = match
   const displayName = user.user_name ?? 'Unknown'
+  const age = calculateAge(user.birthday)
+  const nameWithAge = age != null ? `${displayName}, ${age}` : displayName
 
   const photoUrl = user.first_photo_path
     ? supabase.storage.from('gallery').getPublicUrl(user.first_photo_path).data.publicUrl
@@ -83,7 +86,7 @@ export function MatchCard({ match }: MatchCardProps) {
       {/* Info overlay */}
       <div className="absolute bottom-0 left-0 right-0 px-7 pb-8 pt-6 flex flex-col gap-3">
         <h2 className="text-white font-extrabold text-[28px] tracking-tight leading-none">
-          {displayName}
+          {nameWithAge}
         </h2>
 
         {user.bio && (

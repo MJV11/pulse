@@ -50,10 +50,12 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       m.user_id === userId ? m.match_user_id : m.user_id
     );
 
-    // Fetch profiles for all matched users in one query
+    // Fetch full profiles for all matched users in one query. Selecting *
+    // keeps this forward-compatible — any new user_details column flows
+    // through the response automatically.
     const { data: profiles, error: profileError } = await supabase
       .from('user_details')
-      .select('user_id, user_name, bio, sports, rating')
+      .select('*')
       .in('user_id', otherUserIds);
 
     if (profileError) {
@@ -76,7 +78,14 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       // Non-fatal — proceed without photos
     }
 
-    const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+    // Drop the binary geography column before sending; everything else
+    // from user_details flows through.
+    const profileMap = new Map(
+      (profiles ?? []).map((p) => {
+        const { location: _location, ...rest } = p as Record<string, unknown> & { user_id: string };
+        return [rest.user_id as string, rest];
+      }),
+    );
 
     // Build first-photo map (first occurrence per user after ordering)
     const photoMap = new Map<string, string>();
@@ -93,11 +102,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         match_id: m.id,
         matched_at: m.created_at,
         user: {
+          ...(profile ?? { user_id: otherId }),
           user_id: otherId,
-          user_name: profile?.user_name ?? null,
-          bio: profile?.bio ?? null,
-          sports: profile?.sports ?? [],
-          rating: profile?.rating ?? null,
           first_photo_path: photoMap.get(otherId) ?? null,
         },
       };

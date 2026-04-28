@@ -36,8 +36,22 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
+    // The RPC returns rows of { user_data: jsonb, first_photo_path, distance_miles }.
+    // Flatten the user_data fields up so the client gets a flat object — and any
+    // new column added to user_details automatically rides along.
+    const rows = (data ?? []) as Array<{
+      user_data: Record<string, unknown>;
+      first_photo_path: string | null;
+      distance_miles: number;
+    }>;
+    const flat = rows.map((r) => ({
+      ...(r.user_data ?? {}),
+      first_photo_path: r.first_photo_path,
+      distance_miles: r.distance_miles,
+    }));
+
     // discovery_feed returns an empty array when the user has no stored location
-    res.json({ data: data ?? [], ...(!data?.length && { reason: 'no_location' }) });
+    res.json({ data: flat, ...(!flat.length && { reason: 'no_location' }) });
   } catch (err) {
     console.error('Unexpected error in GET /discovery:', err);
     res.status(500).json({ error: { message: 'Internal server error' } });

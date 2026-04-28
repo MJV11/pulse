@@ -53,10 +53,12 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    // Fetch the matched user's profile + first photo to return to the client
-    const { data: profileRows } = await supabase
+    // Fetch the matched user's full profile + first photo. Selecting * keeps
+    // this forward-compatible: any new column on user_details flows through
+    // automatically. We drop the binary geography column before responding.
+    const { data: profileRow } = await supabase
       .from('user_details')
-      .select('user_id, user_name, bio, sports, rating')
+      .select('*')
       .eq('user_id', to_user_id)
       .maybeSingle();
 
@@ -68,12 +70,20 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
       .order('created_at', { ascending: true })
       .limit(1);
 
+    const profile = profileRow
+      ? (() => {
+          const { location: _location, ...rest } = profileRow as Record<string, unknown>;
+          return rest;
+        })()
+      : { user_id: to_user_id };
+
     res.json({
       data: {
         matched: true,
         match_id: matchId,
         user: {
-          ...(profileRows ?? { user_id: to_user_id, user_name: null, bio: null, sports: [], rating: null }),
+          ...profile,
+          user_id: to_user_id,
           first_photo_path: photoRows?.[0]?.storage_path ?? null,
         },
       },

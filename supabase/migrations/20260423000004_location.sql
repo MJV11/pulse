@@ -31,6 +31,10 @@ as $$
 $$;
 
 -- ── Helper: find nearby users within a radius ─────────────────────────────────
+-- Returns the full user_details row as a jsonb blob (with the binary `location`
+-- column stripped) plus a couple of computed scalars. Returning jsonb keeps
+-- the function forward-compatible: any new column added to user_details
+-- automatically appears in the response without needing a migration here.
 DROP FUNCTION IF EXISTS public.nearby_users;
 create or replace function public.nearby_users(
   lat              float8,
@@ -39,11 +43,7 @@ create or replace function public.nearby_users(
   exclude_user_id  uuid    default null
 )
 returns table (
-  user_id          uuid,
-  user_name        text,
-  bio              text,
-  sports           text[],
-  rating           numeric,
+  user_data        jsonb,
   first_photo_path text,
   distance_miles   float8
 )
@@ -52,11 +52,7 @@ stable
 security definer
 as $$
   select
-    ud.user_id,
-    ud.user_name,
-    ud.bio,
-    ud.sports,
-    ud.rating,
+    (to_jsonb(ud) - 'location') as user_data,
     (
       select pp.storage_path
       from public.profile_photos pp
@@ -90,11 +86,7 @@ create or replace function public.discovery_feed(
   radius_miles float8 default 50
 )
 returns table (
-  user_id          uuid,
-  user_name        text,
-  bio              text,
-  sports           text[],
-  rating           numeric,
+  user_data        jsonb,
   first_photo_path text,
   distance_miles   float8
 )

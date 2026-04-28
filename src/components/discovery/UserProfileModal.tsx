@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { apiFetch } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
+import { calculateAge } from '../../lib/age'
 import type { NearbyUser } from '../../hooks/useDiscovery'
 import { PiX, PiMapPin, PiImage } from 'react-icons/pi'
 
@@ -42,6 +43,8 @@ export function UserProfileModal({
   const [photosLoading, setPhotosLoading] = useState(true)
 
   const displayName = user.user_name ?? 'Unknown'
+  const age = calculateAge(user.birthday)
+  const nameWithAge = age != null ? `${displayName}, ${age}` : displayName
 
   useEffect(() => {
     if (!session?.access_token) return
@@ -78,7 +81,7 @@ export function UserProfileModal({
         {/* Hero — name + location only */}
         <div className="bg-white rounded-t-3xl px-8 pt-8 pb-6 flex flex-col gap-2">
           <h2 className="text-[#1d1a20] font-extrabold text-2xl tracking-tight leading-none truncate pr-10">
-            {displayName}
+            {nameWithAge}
           </h2>
           <div className="flex items-center gap-1.5">
             <PiMapPin size={14} className="text-[#94a3b8]" />

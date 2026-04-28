@@ -11,18 +11,23 @@ import { DISCOVERY_BTN_FILTER } from '../lib/assets'
 import { supabase } from '../lib/supabase'
 import { apiFetch } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { calculateAge } from '../lib/age'
 
 interface LikeResponse {
   data: {
     matched: boolean
     match_id?: string
+    // Mirror of MatchedUser — server selects * from user_details and includes
+    // first_photo_path; treat as forward-compatible.
     user?: {
       user_id: string
       user_name: string | null
       bio: string | null
+      birthday: string | null
       sports: string[]
       rating: number | null
       first_photo_path: string | null
+      [key: string]: unknown
     }
   }
 }
@@ -46,6 +51,7 @@ function toProfile(user: NearbyUser): DiscoveryProfile {
   return {
     id: user.user_id,
     name: user.user_name ?? 'Unknown',
+    age: calculateAge(user.birthday) ?? undefined,
     photo: photoUrl,
     distance: distanceLabel,
     verified: false,

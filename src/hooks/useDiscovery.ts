@@ -2,14 +2,24 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
 
+/**
+ * Shape returned by `GET /api/discovery`. The server flattens the full
+ * `user_details` row (minus the geography blob) plus a couple of computed
+ * scalars, so any new column added to `user_details` will flow through
+ * automatically — feel free to read additional fields directly off this
+ * object even if they aren't listed here.
+ */
 export interface NearbyUser {
   user_id: string
   user_name: string | null
   bio: string | null
+  birthday: string | null
   sports: string[]
   rating: number | null
   first_photo_path: string | null
   distance_miles: number
+  // Forward-compatibility escape hatch for newly added user_details columns
+  [key: string]: unknown
 }
 
 interface DiscoveryResponse {
