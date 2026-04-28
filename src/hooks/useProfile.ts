@@ -10,6 +10,14 @@ export interface UserProfile {
   birthday: string | null
   sports: string[]
   rating: number | null
+  /** Storage path of the user's first gallery photo (lowest position), or null. */
+  first_photo_path: string | null
+  /**
+   * ISO timestamp of when the user's Pulse Premium subscription expires.
+   * `null` means they have never subscribed. A timestamp in the past means
+   * they have lapsed. `> now()` means they are actively premium.
+   */
+  premium_expires_at: string | null
   created_at: string
   updated_at: string
 }

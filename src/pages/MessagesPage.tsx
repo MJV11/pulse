@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Sidebar } from '../components/layout/Sidebar'
 import { ConversationList } from '../components/messages/ConversationList'
 import { ChatWindow } from '../components/messages/ChatWindow'
 import { useConversations } from '../hooks/useConversations'
@@ -188,50 +187,46 @@ export function MessagesPage() {
   const activeMessages = (activeId ? threads.get(activeId) : undefined) ?? []
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#fbf8ff]">
-      <Sidebar variant="messages" />
+    <div className="h-screen overflow-hidden flex">
+      <ConversationList
+        conversations={conversations}
+        recentMatches={recentMatches}
+        activeId={activeId ?? undefined}
+        onSelect={setActiveId}
+        onSelectMatch={setActiveId}
+      />
 
-      <div className="ml-[288px] flex flex-1 overflow-hidden">
-        <ConversationList
-          conversations={conversations}
-          recentMatches={recentMatches}
-          activeId={activeId ?? undefined}
-          onSelect={setActiveId}
-          onSelectMatch={setActiveId}
+      {activeConversation ? (
+        <ChatWindow
+          conversation={activeConversation}
+          messages={activeMessages}
+          onSend={handleSend}
         />
-
-        {activeConversation ? (
-          <ChatWindow
-            conversation={activeConversation}
-            messages={activeMessages}
-            onSend={handleSend}
-          />
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            {convsLoading || threadLoading ? (
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-8 h-8 rounded-full border-2 border-[#dc2626] border-t-transparent animate-spin" />
-                <span className="text-[#94a3b8] text-sm">Loading…</span>
+      ) : (
+        <div className="flex-1 flex items-center justify-center">
+          {convsLoading || threadLoading ? (
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 rounded-full border-2 border-[#dc2626] border-t-transparent animate-spin" />
+              <span className="text-[#94a3b8] text-sm">Loading…</span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 text-center max-w-xs">
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)' }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3 text-center max-w-xs">
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)' }}
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-                <p className="text-[#131b2e] font-semibold">No conversations yet</p>
-                <p className="text-[#94a3b8] text-sm">
-                  Match with someone in Discovery and tap their name above to say hello.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+              <p className="text-[#131b2e] font-semibold">No conversations yet</p>
+              <p className="text-[#94a3b8] text-sm">
+                Match with someone in Discovery and tap their name above to say hello.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

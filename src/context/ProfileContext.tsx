@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useEffect, useState } from 'react'
+import { createContext, useContext, useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from './AuthContext'
 import { apiFetch } from '../lib/api'
 import { SetupProfileFlow } from '../components/profile/SetupProfileFlow'
@@ -8,6 +8,14 @@ interface ProfileContextValue {
   profile: UserProfile | null
   profileLoading: boolean
   refreshProfile: () => void
+  /**
+   * Whether the authenticated user currently has Pulse Premium.
+   * Derived from `profile.premium_expires_at` — true iff a row exists in
+   * `premium_users` with `expires_at` strictly in the future.
+   */
+  isPremium: boolean
+  /** ISO timestamp of when premium expires, or `null` if never subscribed. */
+  premiumExpiresAt: string | null
 }
 
 const ProfileContext = createContext<ProfileContextValue | undefined>(undefined)
@@ -39,12 +47,22 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     session &&
     (profile === null || !profile?.user_name)
 
+  const { isPremium, premiumExpiresAt } = useMemo(() => {
+    const expires = profile?.premium_expires_at ?? null
+    if (!expires) return { isPremium: false, premiumExpiresAt: null }
+    const expiresMs = Date.parse(expires)
+    const active = Number.isFinite(expiresMs) && expiresMs > Date.now()
+    return { isPremium: active, premiumExpiresAt: expires }
+  }, [profile?.premium_expires_at])
+
   return (
     <ProfileContext.Provider
       value={{
         profile: profile ?? null,
         profileLoading,
         refreshProfile: fetchProfile,
+        isPremium,
+        premiumExpiresAt,
       }}
     >
       {children}

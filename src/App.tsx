@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ProfileProvider } from './context/ProfileContext'
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute'
+import { AppLayout } from './components/layout/AppLayout'
 import { LoginPage } from './pages/LoginPage'
 import { SignUpPage } from './pages/SignUpPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
@@ -26,39 +27,21 @@ export default function App() {
         <ProfileProvider>
           <LocationSync />
           <Routes>
-            {/* Protected app routes */}
+            {/* Protected app routes — share the AppLayout chrome */}
             <Route
-              path="/discovery"
               element={
                 <ProtectedRoute>
-                  <DiscoveryPage />
+                  <AppLayout />
                 </ProtectedRoute>
               }
-            />
-            <Route
-              path="/matches"
-              element={
-                <ProtectedRoute>
-                  <MatchesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/messages"
-              element={
-                <ProtectedRoute>
-                  <MessagesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
+            >
+              <Route path="/discovery" element={<DiscoveryPage />} />
+              <Route path="/matches" element={<MatchesPage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+
+            {/* Strava OAuth callback — protected, but no sidebar chrome */}
             <Route
               path="/integrations/strava/callback"
               element={

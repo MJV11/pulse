@@ -1,4 +1,5 @@
 import type { DiscoveryProfile } from '../../lib/data'
+import { MdLocationPin } from 'react-icons/md'
 
 interface ProfileCardProps {
   profile: DiscoveryProfile
@@ -41,7 +42,7 @@ export function ProfileCard({ profile, onClick }: ProfileCardProps) {
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
-      className={`relative rounded-[32px] overflow-hidden shadow-[0px_20px_50px_0px_rgba(217,4,41,0.1)] w-full max-w-[500px] aspect-[3/4] ${onClick ? 'cursor-pointer' : ''}`}
+      className={`relative rounded-[32px] overflow-hidden shadow-[0px_20px_50px_0px_rgba(217,4,41,0.1)] w-full aspect-[3/4] ${onClick ? 'cursor-pointer' : ''}`}
       style={!hasPhoto ? { background: gradientFor(profile.id) } : undefined}
     >
       {/* Photo or ghost initials */}
@@ -81,27 +82,11 @@ export function ProfileCard({ profile, onClick }: ProfileCardProps) {
               )}
             </div>
             {/* Distance */}
-            <div className="flex items-center gap-2 opacity-90">
-              <img
-                src="https://www.figma.com/api/mcp/asset/39bf9eef-35ce-4368-94db-128385ffba0b"
-                alt=""
-                className="w-[9px] h-[12px] object-contain"
-              />
-              <span className="text-white font-semibold text-[14px]">{profile.distance}</span>
+            <div className="flex items-center gap-2 opacity-90 text-white">
+              <MdLocationPin size={14} />
+              <span className="font-semibold text-[14px]">{profile.distance}</span>
             </div>
           </div>
-
-          {/* Info button */}
-          <button
-            onClick={(e) => { e.stopPropagation(); onClick?.() }}
-            className="backdrop-blur-md bg-white/20 border border-white/30 rounded-full p-[9px] flex items-center justify-center"
-          >
-            <img
-              src="https://www.figma.com/api/mcp/asset/02447170-0ed5-4e8a-a9bf-dd1ce3a39019"
-              alt="Info"
-              className="w-5 h-5 object-contain"
-            />
-          </button>
         </div>
 
         {/* Interest/sport chips */}

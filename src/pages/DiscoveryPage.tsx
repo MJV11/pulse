@@ -1,16 +1,16 @@
-import { useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sidebar } from '../components/layout/Sidebar'
 import { ProfileCard } from '../components/discovery/ProfileCard'
 import { ActionControls } from '../components/discovery/ActionControls'
 import { UserProfileModal } from '../components/discovery/UserProfileModal'
+import { MatchCelebration } from '../components/discovery/MatchCelebration'
 import { useDiscovery } from '../hooks/useDiscovery'
 import type { NearbyUser } from '../hooks/useDiscovery'
 import type { DiscoveryProfile } from '../lib/data'
-import { DISCOVERY_BTN_FILTER } from '../lib/assets'
 import { supabase } from '../lib/supabase'
 import { apiFetch } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { useProfile } from '../context/ProfileContext'
 import { calculateAge } from '../lib/age'
 
 interface LikeResponse {
@@ -32,7 +32,8 @@ interface LikeResponse {
   }
 }
 
-interface MatchCelebration {
+interface MatchCelebrationState {
+  userId: string
   userName: string
   photoUrl: string | null
 }
@@ -59,6 +60,11 @@ function toProfile(user: NearbyUser): DiscoveryProfile {
   }
 }
 
+/** How long the swipe-off animation runs. Keep in sync with the CSS transition. */
+const SWIPE_MS = 320
+
+type SwipeDirection = 'left' | 'right' | 'up'
+
 /**
  * Discovery (swipe) page — shows real nearby users from the API as swipeable
  * profile cards. Like/Dislike/Rewind navigate through the stack.
@@ -67,79 +73,152 @@ function toProfile(user: NearbyUser): DiscoveryProfile {
  */
 export function DiscoveryPage() {
   const { session } = useAuth()
+  const { profile: myProfile, isPremium } = useProfile()
   const navigate = useNavigate()
   const { users, loading, noLocation, error } = useDiscovery(50)
   const [index, setIndex] = useState(0)
   const [radiusMiles] = useState(50)
   const [modalUser, setModalUser] = useState<NearbyUser | null>(null)
-  const [celebration, setCelebration] = useState<MatchCelebration | null>(null)
+  const [celebration, setCelebration] = useState<MatchCelebrationState | null>(null)
   const [liking, setLiking] = useState(false)
+  /** Direction the active card is flying off in, or `null` when at rest. */
+  const [exitDirection, setExitDirection] = useState<SwipeDirection | null>(null)
+  /** Flips to true a frame after a new card mounts so we can animate it in. */
+  const [entered, setEntered] = useState(false)
 
   const currentUser = users[index]
   const profile = currentUser ? toProfile(currentUser) : null
 
-  const advance = useCallback(() => setIndex((i) => Math.min(i + 1, users.length)), [users.length])
+  // Run an entrance animation each time a new card lands — fires whenever the
+  // active user_id changes (advance, rewind, or initial load).
+  useEffect(() => {
+    if (!currentUser) return
+    setEntered(false)
+    const id = window.setTimeout(() => setEntered(true), 16)
+    return () => window.clearTimeout(id)
+  }, [currentUser?.user_id])
 
-  const handleLike = useCallback(async () => {
-    if (!currentUser || !session?.access_token || liking) return
-    setLiking(true)
-    try {
-      const resp = await apiFetch<LikeResponse>(
-        '/likes',
-        session.access_token,
-        {
-          method: 'POST',
-          body: JSON.stringify({ to_user_id: currentUser.user_id }),
-        },
-      )
-      if (resp.data.matched && resp.data.user) {
-        const { user } = resp.data
-        const photoUrl = user.first_photo_path
-          ? supabase.storage.from('gallery').getPublicUrl(user.first_photo_path).data.publicUrl
-          : null
-        setCelebration({ userName: user.user_name ?? 'Someone', photoUrl })
-      } else {
+  /** Advances to the next card and clears any in-flight exit animation. */
+  const advance = useCallback(() => {
+    setExitDirection(null)
+    setIndex((i) => Math.min(i + 1, users.length))
+  }, [users.length])
+
+  /** Triggers the swipe-off animation and resolves once it has finished. */
+  const swipeAway = useCallback((direction: SwipeDirection) => {
+    return new Promise<void>((resolve) => {
+      setExitDirection(direction)
+      window.setTimeout(resolve, SWIPE_MS)
+    })
+  }, [])
+
+  /** Shared like handler — `direction` controls the exit animation. */
+  const sendLike = useCallback(
+    async (direction: 'right' | 'up') => {
+      if (!currentUser || !session?.access_token || liking || exitDirection) return
+      setLiking(true)
+      // Kick off the swipe and the API call in parallel — we wait for both
+      // before deciding to celebrate or advance.
+      const animPromise = swipeAway(direction)
+      try {
+        const resp = await apiFetch<LikeResponse>(
+          '/likes',
+          session.access_token,
+          {
+            method: 'POST',
+            body: JSON.stringify({ to_user_id: currentUser.user_id }),
+          },
+        )
+        await animPromise
+        if (resp.data.matched && resp.data.user) {
+          const { user } = resp.data
+          const photoUrl = user.first_photo_path
+            ? supabase.storage.from('gallery').getPublicUrl(user.first_photo_path).data.publicUrl
+            : null
+          setCelebration({
+            userId: user.user_id,
+            userName: user.user_name ?? 'Someone',
+            photoUrl,
+          })
+        } else {
+          advance()
+        }
+      } catch (err) {
+        console.error('Failed to record like:', err)
+        await animPromise
         advance()
+      } finally {
+        setLiking(false)
       }
-    } catch (err) {
-      console.error('Failed to record like:', err)
-      advance()
-    } finally {
-      setLiking(false)
-    }
-  }, [currentUser, session?.access_token, liking, advance])
+    },
+    [currentUser, session?.access_token, liking, exitDirection, advance, swipeAway],
+  )
+
+  const handleLike = useCallback(() => sendLike('right'), [sendLike])
+
+  // Super Pulse is premium-gated in the UI. The backend doesn't differentiate
+  // it from a regular like yet, so it routes through `sendLike` with an
+  // upward exit. When we add a real super-like flow, swap this for a
+  // dedicated handler.
+  const handleSuperPulse = useCallback(() => sendLike('up'), [sendLike])
 
   const handleLikeFromModal = useCallback(async () => {
     setModalUser(null)
-    await handleLike()
-  }, [handleLike])
+    await sendLike('right')
+  }, [sendLike])
 
-  function handleDislike() {
+  const handleDislike = useCallback(async () => {
+    if (exitDirection) return
     setModalUser(null)
+    await swipeAway('left')
     advance()
-  }
+  }, [exitDirection, advance, swipeAway])
 
-  function handleRewind() {
+  const handleRewind = useCallback(() => {
+    if (exitDirection) return
     setIndex((i) => Math.max(i - 1, 0))
-  }
+  }, [exitDirection])
 
   function dismissCelebration() {
     setCelebration(null)
     advance()
   }
 
-  return (
-    <div className="flex min-h-screen bg-[#fbf8ff]">
-      <Sidebar variant="discovery" />
+  /** Public URL for the current user's first gallery photo, used in the
+      match celebration so we can show "you & them" side by side. */
+  const myPhotoUrl = myProfile?.first_photo_path
+    ? supabase.storage.from('gallery').getPublicUrl(myProfile.first_photo_path).data.publicUrl
+    : null
 
-      <main className="ml-[288px] flex-1 flex items-center justify-center p-12 relative">
-        {/* Card + controls column */}
-        <div className="flex flex-col items-center gap-8">
+  /** Resting / entering / exiting transform for the active card. */
+  const cardTransform = (() => {
+    switch (exitDirection) {
+      case 'right':
+        return 'translate3d(140%, -8%, 0) rotate(20deg)'
+      case 'left':
+        return 'translate3d(-140%, -8%, 0) rotate(-20deg)'
+      case 'up':
+        return 'translate3d(0, -130%, 0) rotate(-2deg) scale(0.92)'
+      default:
+        return entered
+          ? 'translate3d(0, 0, 0) scale(1)'
+          : 'translate3d(0, 12px, 0) scale(0.96)'
+    }
+  })()
+  const cardOpacity = exitDirection ? 0 : entered ? 1 : 0
+
+  return (
+    <>
+      <main className="min-h-screen flex items-center justify-center p-12 relative">
+        {/* Card + controls column — width is set here so children that use
+            `w-full` (ProfileCard, the stacked next-card preview) can actually
+            grow. Without this the column shrink-wraps to ActionControls. */}
+        <div className="flex flex-col items-center gap-8 w-1/2 max-w-[500px]">
 
           {/* Loading */}
           {loading && (
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-full max-w-[500px] aspect-[3/4] rounded-[32px] bg-[#f1f5f9] animate-pulse" />
+            <div className="flex flex-col items-center gap-4 w-full">
+              <div className="w-full aspect-[3/4] rounded-[32px] bg-[#f1f5f9] animate-pulse" />
               <p className="text-[#94a3b8] text-sm">Finding people near you…</p>
             </div>
           )}
@@ -219,7 +298,7 @@ export function DiscoveryPage() {
                 <div
                   className="absolute"
                   style={{
-                    width: 'calc(min(500px, 100% - 96px))',
+                    width: 'calc(100% - 96px)',
                     aspectRatio: '3/4',
                     top: '50%',
                     left: '50%',
@@ -231,32 +310,35 @@ export function DiscoveryPage() {
                 />
               )}
 
-              <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-[500px]">
-                <div className="absolute -top-3 right-0 bg-white rounded-full px-3 py-1 text-xs font-semibold text-[#64748b] shadow-sm">
+              <div className="relative z-10 flex flex-col items-center gap-8 w-full">
+                <div className="absolute -top-3 -right-6 bg-white rounded-full px-3 py-1 text-xs font-semibold text-[#64748b] shadow-sm">
                   {index + 1} / {users.length}
                 </div>
-                <ProfileCard
-                  profile={profile}
-                  onClick={() => setModalUser(currentUser)}
-                />
+                <div
+                  key={currentUser.user_id}
+                  className="w-full will-change-transform"
+                  style={{
+                    transform: cardTransform,
+                    opacity: cardOpacity,
+                    transition: `transform ${SWIPE_MS}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${SWIPE_MS - 40}ms ease-out`,
+                    pointerEvents: exitDirection ? 'none' : undefined,
+                  }}
+                >
+                  <ProfileCard
+                    profile={profile}
+                    onClick={() => setModalUser(currentUser)}
+                  />
+                </div>
                 <ActionControls
                   onLike={handleLike}
                   onDislike={handleDislike}
-                  onRewind={index > 0 ? handleRewind : undefined}
+                  onRewind={isPremium && index > 0 ? handleRewind : undefined}
+                  onSuperPulse={isPremium ? handleSuperPulse : undefined}
                 />
               </div>
             </>
           )}
         </div>
-
-        {/* Floating filter FAB */}
-        <button
-          className="absolute bottom-12 right-12 w-14 h-14 rounded-full flex items-center justify-center shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] hover:opacity-90 active:scale-95 transition-all"
-          style={{ background: 'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)' }}
-          aria-label="Filter"
-        >
-          <img src={DISCOVERY_BTN_FILTER} alt="" className="w-[18px] h-[18px] object-contain" />
-        </button>
       </main>
 
       {/* User profile modal */}
@@ -272,64 +354,20 @@ export function DiscoveryPage() {
 
       {/* Match celebration overlay */}
       {celebration && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, rgba(217,4,41,0.92) 0%, rgba(255,77,109,0.92) 100%)' }}
-        >
-          {/* Subtle radial glow */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.12)_0%,_transparent_70%)]" />
-
-          <div className="relative flex flex-col items-center gap-8 px-10 text-center">
-            {/* Heading */}
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-white/80 font-semibold text-lg tracking-wider uppercase">
-                It's a Match!
-              </span>
-              <span className="text-white font-extrabold text-4xl tracking-tight">
-                You & {celebration.userName}
-              </span>
-              <span className="text-white/70 text-sm mt-1">both liked each other</span>
-            </div>
-
-            {/* Avatar */}
-            <div className="w-36 h-36 rounded-[28px] overflow-hidden border-4 border-white/30 shadow-2xl">
-              {celebration.photoUrl ? (
-                <img
-                  src={celebration.photoUrl}
-                  alt={celebration.userName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div
-                  className="w-full h-full flex items-center justify-center"
-                  style={{ background: 'rgba(255,255,255,0.2)' }}
-                >
-                  <span className="text-white font-extrabold text-5xl">
-                    {celebration.userName.slice(0, 1).toUpperCase()}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* CTAs */}
-            <div className="flex flex-col gap-3 w-full max-w-[280px]">
-              <button
-                onClick={() => navigate('/messages')}
-                className="w-full py-4 rounded-2xl bg-white text-[#d90429] font-bold text-base tracking-tight hover:bg-white/90 transition-colors"
-              >
-                Send a Message
-              </button>
-              <button
-                onClick={dismissCelebration}
-                className="w-full py-4 rounded-2xl border-2 border-white/40 text-white font-semibold text-base hover:bg-white/10 transition-colors"
-              >
-                Keep Swiping
-              </button>
-            </div>
-          </div>
-        </div>
+        <MatchCelebration
+          myPhotoUrl={myPhotoUrl}
+          myInitial={myProfile?.user_name?.[0] ?? 'Y'}
+          theirName={celebration.userName}
+          theirPhotoUrl={celebration.photoUrl}
+          onMessage={() =>
+            navigate('/messages', {
+              state: { partnerId: celebration.userId },
+            })
+          }
+          onKeepSwiping={dismissCelebration}
+        />
       )}
-    </div>
+    </>
   )
 }
 
