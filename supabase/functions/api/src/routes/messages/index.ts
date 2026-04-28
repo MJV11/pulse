@@ -50,10 +50,12 @@ router.get('/conversations', requireAuth, async (req: Request, res: Response) =>
 
     const partnerIds = Array.from(latestByPartner.keys());
 
-    // Fetch user_details for all partners
+    // Fetch user_details for all partners (forward-compat: select * and strip
+    // the binary `location` column before sending). Anything new added to
+    // user_details flows through automatically.
     const { data: profiles, error: profileErr } = await supabase
       .from('user_details')
-      .select('user_id, user_name, bio')
+      .select('*')
       .in('user_id', partnerIds);
 
     if (profileErr) {
@@ -62,14 +64,46 @@ router.get('/conversations', requireAuth, async (req: Request, res: Response) =>
       return;
     }
 
-    const profileMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+    // Pull each partner's first gallery photo (lowest position) so the
+    // conversation list can render real avatars rather than initials.
+    const { data: photos, error: photosErr } = await supabase
+      .from('profile_photos')
+      .select('user_id, storage_path, position, created_at')
+      .in('user_id', partnerIds)
+      .order('position', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (photosErr) {
+      console.error('Error fetching partner photos:', photosErr);
+      res.status(500).json({ error: { message: 'Failed to fetch partner photos' } });
+      return;
+    }
+
+    const firstPhotoByUser = new Map<string, string>();
+    for (const p of photos ?? []) {
+      if (!firstPhotoByUser.has(p.user_id)) {
+        firstPhotoByUser.set(p.user_id, p.storage_path);
+      }
+    }
+
+    const profileMap = new Map(
+      (profiles ?? []).map((p) => {
+        // deno-lint-ignore no-unused-vars
+        const { location, ...rest } = p as Record<string, unknown> & { user_id: string };
+        return [rest.user_id, rest];
+      }),
+    );
 
     const data = partnerIds.map((partnerId) => {
       const lastMsg = latestByPartner.get(partnerId)!;
-      const profile = profileMap.get(partnerId);
+      const profile = profileMap.get(partnerId) as
+        | (Record<string, unknown> & { user_name?: string | null })
+        | undefined;
       return {
+        ...(profile ?? {}),
         partner_id: partnerId,
         partner_name: profile?.user_name ?? null,
+        partner_first_photo_path: firstPhotoByUser.get(partnerId) ?? null,
         last_message: lastMsg.content,
         last_message_at: lastMsg.created_at,
         is_sent_by_me: lastMsg.from_user_id === userId,

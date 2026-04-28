@@ -1,4 +1,4 @@
-import { PROFILE_ICON_HEART } from '../../lib/assets'
+import { PiInfo } from 'react-icons/pi'
 
 interface AboutMeCardProps {
   bio: string | null
@@ -15,8 +15,8 @@ export function AboutMeCard({ bio, isEditing, onBioChange, onEditClick }: AboutM
       {/* Section heading */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src={PROFILE_ICON_HEART} alt="" className="w-[17px] h-[15px] object-contain" />
-          <h2 className="text-[#1d1a20] font-bold text-xl">About Me</h2>
+          <PiInfo size={24} className="text-[#dc2626]" />
+          <h2 className="text-[#1d1a20] font-bold text-xl">About</h2>
         </div>
         {!isEditing && (
           <button

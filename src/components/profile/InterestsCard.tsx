@@ -1,5 +1,6 @@
 import { useState, KeyboardEvent } from 'react'
-import { PROFILE_ICON_STAR } from '../../lib/assets'
+import { PiBicycle } from 'react-icons/pi'
+import { Button } from '../flowbite-proxy'
 
 interface InterestsCardProps {
   sports: string[]
@@ -46,11 +47,11 @@ export function InterestsCard({ sports, isEditing, onSportsChange, onEditClick }
   }
 
   return (
-    <div className="bg-white border border-[rgba(254,242,242,0.5)] rounded-2xl shadow-[0px_8px_30px_0px_rgba(0,0,0,0.04)] p-[33px] flex flex-col gap-4">
+    <div className="bg-white border border-[rgba(254,242,242,0.5)] rounded-2xl shadow-[0px_8px_30px_0px_rgba(0,0,0,0.04)] p-[33px] flex flex-col gap-4 col-span-2">
       {/* Heading */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src={PROFILE_ICON_STAR} alt="" className="w-[17px] h-[16px] object-contain" />
+          <PiBicycle size={24} className="text-[#dc2626]" />
           <h2 className="text-[#1d1a20] font-bold text-xl">Sports</h2>
         </div>
         {!isEditing && (
@@ -94,7 +95,7 @@ export function InterestsCard({ sports, isEditing, onSportsChange, onEditClick }
       {isEditing ? (
         <div className="flex flex-col gap-3">
           {/* Input row */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <input
               type="text"
               value={sportInput}
@@ -103,13 +104,13 @@ export function InterestsCard({ sports, isEditing, onSportsChange, onEditClick }
               placeholder="Type a sport and press Enter"
               className="flex-1 border border-[#fecaca] rounded-2xl px-4 py-2.5 text-[#1d1a20] text-sm outline-none focus:ring-2 focus:ring-[#dc2626]/30 placeholder:text-[#94a3b8]"
             />
-            <button
+            <Button
               onClick={() => addSport(sportInput)}
-              className="px-4 py-2.5 rounded-2xl text-white font-semibold text-sm shrink-0"
-              style={{ background: 'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)' }}
+              color="pulse-primary"
+              size="sm"
             >
               Add
-            </button>
+            </Button>
           </div>
 
           {/* Suggestions */}

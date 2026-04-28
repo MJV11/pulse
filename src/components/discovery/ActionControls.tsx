@@ -1,6 +1,5 @@
-import { PiHeart, PiHeartDuotone, PiX } from 'react-icons/pi'
+import { PiHeart, PiX } from 'react-icons/pi'
 import {
-  DISCOVERY_BTN_DISLIKE,
   DISCOVERY_BTN_REWIND,
   DISCOVERY_BTN_STAR,
 } from '../../lib/assets'

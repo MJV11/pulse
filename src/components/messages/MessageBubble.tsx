@@ -44,6 +44,10 @@ export function MessageBubble({ message, showAvatar = true }: MessageBubbleProps
             {message.reacted_with}
           </span>
         )}
+
+        {message.time && (
+          <span className={`text-xs ${isSent ? 'self-end' : 'self-start'} font-normal text-[#5c403a]`}>{message.time}</span>
+        )}
       </div>
     </div>
   )
@@ -55,9 +59,6 @@ function ReceivedBubble({ message }: { message: Message }) {
       <p className="text-[#131b2e] text-base font-normal leading-[1.6] whitespace-pre-line">
         {message.content}
       </p>
-      {message.time && (
-        <span className="text-[#5c403a] text-[10px] font-normal">{message.time}</span>
-      )}
     </div>
   )
 }
@@ -71,9 +72,6 @@ function SentBubble({ message }: { message: Message }) {
       <p className="text-white text-base font-normal leading-[1.6] whitespace-pre-line">
         {message.content}
       </p>
-      {message.time && (
-        <span className="text-white/70 text-[10px] font-normal text-right">{message.time}</span>
-      )}
     </div>
   )
 }
@@ -95,9 +93,6 @@ function SentImageBubble({ message }: { message: Message }) {
         style={{ background: 'linear-gradient(134.85deg, #ef233c 0%, #d90429 100%)' }}
       >
         <p className="text-white text-base font-normal leading-[1.6]">{message.content}</p>
-        {message.time && (
-          <span className="text-white/70 text-[10px] font-normal text-right">{message.time}</span>
-        )}
       </div>
     </div>
   )

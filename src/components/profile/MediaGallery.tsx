@@ -71,7 +71,7 @@ export function MediaGallery({ userId, photos, loading, addPhoto, removePhoto }:
   const canAddMore = photos.length < MAX_PHOTOS
 
   return (
-    <div className="col-span-3 flex flex-col gap-4">
+    <div className="col-span-4 flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <PiImage size={18} className="text-[#dc2626]" />

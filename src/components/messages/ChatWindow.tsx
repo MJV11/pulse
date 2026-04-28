@@ -1,7 +1,9 @@
+import { Fragment } from 'react'
 import type { Conversation, Message } from '../../lib/data'
 import { ChatHeader } from './ChatHeader'
 import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
+import { formatDateSeparator, localDateKey } from '../../lib/time'
 
 interface ChatWindowProps {
   conversation: Conversation
@@ -11,27 +13,47 @@ interface ChatWindowProps {
 
 /**
  * Right-pane chat window: sticky header, scrollable message stream, and input bar.
+ *
+ * Messages are grouped into per-day buckets in the viewer's local timezone so
+ * the date pills (`Today`, `Yesterday`, weekday, full date) line up with the
+ * user's calendar rather than UTC.
  */
 export function ChatWindow({ conversation, messages, onSend }: ChatWindowProps) {
   return (
     <div className="flex-1 bg-white relative flex flex-col h-full overflow-hidden">
       <ChatHeader conversation={conversation} />
 
-      {/* Date separator + messages */}
       <div className="absolute inset-0 top-20 bottom-[124px] overflow-y-auto px-8 py-8 flex flex-col gap-3">
-        {/* Date separator */}
-        <div className="flex justify-center mb-2">
-          <span className="bg-[#f4f2ff] text-[#5c403a] text-xs font-medium px-4 py-[3px] rounded-full">
-            Today
-          </span>
-        </div>
+        {messages.length === 0 && (
+          <div className="flex justify-center mb-2">
+            <span className="bg-[#f4f2ff] text-[#5c403a] text-xs font-medium px-4 py-[3px] rounded-full">
+              Say hello
+            </span>
+          </div>
+        )}
 
-        {/* Message stream */}
         {messages.map((msg, idx) => {
           const prevMsg = messages[idx - 1]
           const showAvatar = !prevMsg || prevMsg.type !== msg.type
+
+          // Insert a date separator whenever the local-day bucket changes.
+          // Falls back gracefully when a message has no timestamp (e.g.
+          // static demo data) — we only render a separator if we can.
+          const currKey = msg.timestamp ? localDateKey(msg.timestamp) : null
+          const prevKey = prevMsg?.timestamp ? localDateKey(prevMsg.timestamp) : null
+          const showSeparator = !!currKey && currKey !== prevKey
+
           return (
-            <MessageBubble key={msg.id} message={msg} showAvatar={showAvatar} />
+            <Fragment key={msg.id}>
+              {showSeparator && msg.timestamp && (
+                <div className="flex justify-center my-2">
+                  <span className="bg-[#f4f2ff] text-[#5c403a] text-xs font-medium px-4 py-[3px] rounded-full">
+                    {formatDateSeparator(msg.timestamp)}
+                  </span>
+                </div>
+              )}
+              <MessageBubble message={msg} showAvatar={showAvatar} />
+            </Fragment>
           )
         })}
       </div>

@@ -113,7 +113,7 @@ export function ProfilePage() {
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-4 gap-6">
               <AboutMeCard
                 bio={displayBio}
                 isEditing={isEditing}

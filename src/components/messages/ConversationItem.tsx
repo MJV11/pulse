@@ -1,4 +1,5 @@
 import type { Conversation } from '../../lib/data'
+import { UserAvatar } from '../common/UserAvatar'
 
 interface ConversationItemProps {
   conversation: Conversation
@@ -19,10 +20,12 @@ export function ConversationItem({ conversation, active, onClick }: Conversation
     >
       {/* Avatar */}
       <div className="relative shrink-0">
-        <img
-          src={conversation.avatar}
-          alt={conversation.name}
-          className="w-14 h-14 rounded-2xl object-cover opacity-100"
+        <UserAvatar
+          photoUrl={conversation.avatar}
+          name={conversation.name}
+          userId={conversation.id}
+          size={56}
+          rounded="2xl"
         />
         {conversation.unread && (
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#dc2626] border-2 border-white rounded-full flex items-center justify-center">

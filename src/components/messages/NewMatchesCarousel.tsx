@@ -1,32 +1,10 @@
 import { supabase } from '../../lib/supabase'
 import type { MatchItem } from '../../hooks/useMatches'
+import { UserAvatar } from '../common/UserAvatar'
 
 interface NewMatchesCarouselProps {
   matches: MatchItem[]
   onSelect: (userId: string) => void
-}
-
-function initials(name: string | null) {
-  if (!name) return '?'
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
-
-const GRADIENTS = [
-  'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)',
-  'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
-  'linear-gradient(135deg, #0369a1 0%, #38bdf8 100%)',
-  'linear-gradient(135deg, #b45309 0%, #fbbf24 100%)',
-  'linear-gradient(135deg, #065f46 0%, #34d399 100%)',
-]
-
-function gradientFor(userId: string) {
-  const hash = userId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return GRADIENTS[hash % GRADIENTS.length]
 }
 
 export function NewMatchesCarousel({ matches, onSelect }: NewMatchesCarouselProps) {
@@ -51,22 +29,14 @@ export function NewMatchesCarousel({ matches, onSelect }: NewMatchesCarouselProp
               onClick={() => onSelect(user.user_id)}
             >
               <div className="relative">
-                {photoUrl ? (
-                  <img
-                    src={photoUrl}
-                    alt={user.user_name ?? 'Match'}
-                    className="w-[52px] h-[52px] rounded-full object-cover border-2 border-[#ef4444] group-hover:opacity-90 transition-opacity"
-                  />
-                ) : (
-                  <div
-                    className="w-[52px] h-[52px] rounded-full flex items-center justify-center border-2 border-[#ef4444] group-hover:opacity-90 transition-opacity"
-                    style={{ background: gradientFor(user.user_id) }}
-                  >
-                    <span className="text-white font-bold text-base leading-none select-none">
-                      {initials(user.user_name)}
-                    </span>
-                  </div>
-                )}
+                <UserAvatar
+                  photoUrl={photoUrl}
+                  name={user.user_name}
+                  userId={user.user_id}
+                  size={52}
+                  rounded="full"
+                  className="border-2 border-[#ef4444] group-hover:opacity-90 transition-opacity"
+                />
                 {/* Pulse ring on hover */}
                 <span className="absolute inset-0 rounded-full ring-2 ring-[#ef4444]/0 group-hover:ring-[#ef4444]/30 transition-all" />
               </div>

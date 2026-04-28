@@ -7,6 +7,7 @@ import { useMatches } from '../hooks/useMatches'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
 import { supabase } from '../lib/supabase'
+import { formatTime } from '../lib/time'
 import type { Conversation, Message } from '../lib/data'
 
 interface DbMessage {
@@ -23,39 +24,15 @@ interface ThreadResponse {
   data: DbMessage[]
 }
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-}
-
 function dbMessageToMessage(msg: DbMessage, currentUserId: string): Message {
   return {
     id: msg.id,
     type: msg.from_user_id === currentUserId ? 'sent' : 'received',
     content: msg.content,
     time: formatTime(msg.created_at),
+    timestamp: msg.created_at,
     reacted_with: msg.reacted_with ?? undefined,
   }
-}
-
-/** SVG initials data-URI fallback for users without a photo. */
-function makeInitialsAvatar(name: string | null): string {
-  const label = (name ?? '?')
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-  const palette = ['#d90429', '#7c3aed', '#0369a1', '#b45309', '#065f46']
-  const hash = (name ?? '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  const fill = palette[hash % palette.length]
-  const svg = [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56">`,
-    `<rect width="56" height="56" rx="12" fill="${fill}"/>`,
-    `<text x="28" y="36" text-anchor="middle" font-family="system-ui,sans-serif"`,
-    ` font-weight="700" font-size="20" fill="white">${label}</text>`,
-    `</svg>`,
-  ].join('')
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
 }
 
 interface MessagesLocationState {
@@ -110,7 +87,8 @@ export function MessagesPage() {
         map.set(m.user.user_id, {
           id: m.user.user_id,
           name: m.user.user_name ?? 'Unknown',
-          avatar: photoUrl ?? makeInitialsAvatar(m.user.user_name),
+          // null avatars are rendered as a gradient+initials fallback by UserAvatar
+          avatar: photoUrl,
           lastMessage: '',
           time: '',
           unread: false,
@@ -150,11 +128,13 @@ export function MessagesPage() {
   const handleSend = useCallback(async (text: string) => {
     if (!activeId || !session?.access_token) return
 
+    const nowIso = new Date().toISOString()
     const optimistic: Message = {
       id: crypto.randomUUID(),
       type: 'sent',
       content: text,
-      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      time: formatTime(nowIso),
+      timestamp: nowIso,
     }
     setThreads((prev) => {
       const next = new Map(prev)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MSG_ICON_ATTACH, MSG_ICON_EMOJI, MSG_ICON_IMAGE, MSG_ICON_SEND } from '../../lib/assets'
+import { PiPaperPlaneRight } from 'react-icons/pi'
 
 interface MessageInputProps {
   onSend?: (text: string) => void
@@ -27,13 +27,6 @@ export function MessageInput({ onSend }: MessageInputProps) {
   return (
     <div className="p-6 absolute bottom-0 left-0 right-0">
       <div className="backdrop-blur-md bg-[rgba(244,242,255,0.5)] border border-[rgba(254,226,226,0.2)] rounded-3xl px-3 py-3 flex items-end gap-4">
-        {/* Left action icons */}
-        <div className="flex items-center gap-1 pb-1 shrink-0">
-          <IconButton icon={MSG_ICON_ATTACH} label="Attach" />
-          <IconButton icon={MSG_ICON_EMOJI} label="Emoji" />
-          <IconButton icon={MSG_ICON_IMAGE} label="Image" />
-        </div>
-
         {/* Text area */}
         <textarea
           value={value}
@@ -51,17 +44,10 @@ export function MessageInput({ onSend }: MessageInputProps) {
           style={{ background: 'linear-gradient(135deg, #ef233c 0%, #d90429 100%)' }}
           aria-label="Send"
         >
-          <img src={MSG_ICON_SEND} alt="" className="w-[19px] h-[16px] object-contain" />
+          <PiPaperPlaneRight size={24} className="text-white" />
         </button>
       </div>
     </div>
   )
 }
 
-function IconButton({ icon, label }: { icon: string; label: string }) {
-  return (
-    <button className="p-2 rounded-full hover:bg-[#f4f2ff] transition-colors" aria-label={label}>
-      <img src={icon} alt={label} className="w-5 h-5 object-contain" />
-    </button>
-  )
-}
