@@ -81,6 +81,9 @@ export function ProfileCard({ profile, onClick }: ProfileCardProps) {
                 />
               )}
             </div>
+            {profile.bio && (
+              <p className="text-white text-sm font-medium line-clamp-2">{profile.bio}</p>
+            )}
             {/* Distance */}
             <div className="flex items-center gap-2 opacity-90 text-white">
               <MdLocationPin size={14} />

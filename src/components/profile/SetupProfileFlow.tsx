@@ -2,11 +2,13 @@ import { useState, KeyboardEvent } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { apiFetch } from '../../lib/api'
 import { calculateAge, maxBirthdayForMinAge, minBirthday, MIN_AGE } from '../../lib/age'
-import type { UserProfile } from '../../hooks/useProfile'
+import type { Gender, LookingFor, UserProfile } from '../../hooks/useProfile'
 
 interface SetupProfileFlowProps {
   /** Pre-filled values when opened from "Edit Profile" */
-  initialValues?: Partial<Pick<UserProfile, 'user_name' | 'bio' | 'birthday' | 'sports'>>
+  initialValues?: Partial<
+    Pick<UserProfile, 'user_name' | 'bio' | 'birthday' | 'sports' | 'gender' | 'looking_for'>
+  >
   onComplete: (profile: UserProfile) => void
   onDismiss?: () => void
   /** "setup" shows the branded onboarding framing; "edit" shows a simpler title */
@@ -19,7 +21,20 @@ const SPORT_SUGGESTIONS = [
   'Skiing', 'Surfing', 'Boxing', 'CrossFit',
 ]
 
-const STEPS = ['Name', 'Birthday', 'Bio', 'Sports'] as const
+const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+  { value: 'man', label: 'Man' },
+  { value: 'woman', label: 'Woman' },
+  { value: 'nonbinary', label: 'Non-binary' },
+]
+
+const LOOKING_FOR_OPTIONS: { value: LookingFor; label: string }[] = [
+  { value: 'man', label: 'Men' },
+  { value: 'woman', label: 'Women' },
+  { value: 'nonbinary', label: 'Non-binary people' },
+  { value: 'all', label: 'Everyone' },
+]
+
+const STEPS = ['Name', 'Birthday', 'Gender', 'Looking for', 'Bio', 'Sports'] as const
 
 /**
  * Multi-step profile setup / edit wizard rendered as a full-screen overlay.
@@ -35,6 +50,8 @@ export function SetupProfileFlow({
   const [step, setStep] = useState(0)
   const [userName, setUserName] = useState(initialValues?.user_name ?? '')
   const [birthday, setBirthday] = useState<string>(initialValues?.birthday ?? '')
+  const [gender, setGender] = useState<Gender | ''>(initialValues?.gender ?? '')
+  const [lookingFor, setLookingFor] = useState<LookingFor | ''>(initialValues?.looking_for ?? '')
   const [bio, setBio] = useState(initialValues?.bio ?? '')
   const [sports, setSports] = useState<string[]>(initialValues?.sports ?? [])
   const [sportInput, setSportInput] = useState('')
@@ -71,8 +88,10 @@ export function SetupProfileFlow({
   function canAdvance() {
     if (step === 0) return userName.trim().length > 0
     if (step === 1) return birthdayValid
-    if (step === 2) return true // bio is optional
-    if (step === 3) return true // sports optional
+    if (step === 2) return gender !== ''
+    if (step === 3) return lookingFor !== ''
+    if (step === 4) return true // bio is optional
+    if (step === 5) return true // sports optional
     return true
   }
 
@@ -86,6 +105,8 @@ export function SetupProfileFlow({
         body: JSON.stringify({
           user_name: userName.trim() || null,
           birthday: birthday || null,
+          gender: gender || null,
+          looking_for: lookingFor || null,
           bio: bio.trim() || null,
           sports,
         }),
@@ -134,13 +155,29 @@ export function SetupProfileFlow({
 
           <h2 className="text-white font-extrabold text-[22px] leading-snug">
             {mode === 'setup'
-              ? ['Set up your profile', 'When were you born?', 'Tell your story', 'Your sports'][step]
-              : ['Edit your name', 'Edit your birthday', 'Edit your bio', 'Edit your sports'][step]}
+              ? [
+                  'Set up your profile',
+                  'When were you born?',
+                  'How do you identify?',
+                  'Who are you looking for?',
+                  'Tell your story',
+                  'Your sports',
+                ][step]
+              : [
+                  'Edit your name',
+                  'Edit your birthday',
+                  'Edit your gender',
+                  'Edit who you’re looking for',
+                  'Edit your bio',
+                  'Edit your sports',
+                ][step]}
           </h2>
           <p className="text-white/75 text-sm mt-1">
             {[
               "What should people call you?",
               `We use your birthday to show your age. You must be at least ${MIN_AGE}.`,
+              "We'll show this on your profile.",
+              "We'll only show you people you'd be interested in.",
               "Share a little about yourself — it's optional.",
               "What sports are you into? Add as many as you like.",
             ][step]}
@@ -207,6 +244,58 @@ export function SetupProfileFlow({
           {step === 2 && (
             <div className="flex flex-col gap-2">
               <label className="text-[#534342] font-semibold text-sm uppercase tracking-wide">
+                I am a…
+              </label>
+              <div className="grid grid-cols-1 gap-2">
+                {GENDER_OPTIONS.map((opt) => {
+                  const selected = gender === opt.value
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setGender(opt.value)}
+                      className={`w-full text-left px-4 py-3 rounded-2xl border text-base font-semibold transition-colors ${
+                        selected
+                          ? 'border-[#dc2626] bg-[#fef2f2] text-[#dc2626]'
+                          : 'border-[#fecaca] bg-white text-[#1d1a20] hover:bg-[#fef2f2]/50'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[#534342] font-semibold text-sm uppercase tracking-wide">
+                Show me…
+              </label>
+              <div className="grid grid-cols-1 gap-2">
+                {LOOKING_FOR_OPTIONS.map((opt) => {
+                  const selected = lookingFor === opt.value
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setLookingFor(opt.value)}
+                      className={`w-full text-left px-4 py-3 rounded-2xl border text-base font-semibold transition-colors ${
+                        selected
+                          ? 'border-[#dc2626] bg-[#fef2f2] text-[#dc2626]'
+                          : 'border-[#fecaca] bg-white text-[#1d1a20] hover:bg-[#fef2f2]/50'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[#534342] font-semibold text-sm uppercase tracking-wide">
                 Bio <span className="text-[#94a3b8] normal-case font-normal">(optional)</span>
               </label>
               <textarea
@@ -221,7 +310,7 @@ export function SetupProfileFlow({
             </div>
           )}
 
-          {step === 3 && (
+          {step === 5 && (
             <div className="flex flex-col gap-4">
               {/* Tag pills */}
               {sports.length > 0 && (

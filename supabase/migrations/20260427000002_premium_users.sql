@@ -59,6 +59,8 @@ returns table (
   birthday           date,
   sports             text[],
   rating             numeric,
+  gender             text,
+  looking_for        text,
   first_photo_path   text,
   latitude           float8,
   longitude          float8,
@@ -77,6 +79,8 @@ as $$
     ud.birthday,
     ud.sports,
     ud.rating,
+    ud.gender,
+    ud.looking_for,
     (
       select pp.storage_path
       from public.profile_photos pp

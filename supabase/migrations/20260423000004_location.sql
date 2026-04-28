@@ -35,6 +35,15 @@ $$;
 -- column stripped) plus a couple of computed scalars. Returning jsonb keeps
 -- the function forward-compatible: any new column added to user_details
 -- automatically appears in the response without needing a migration here.
+--
+-- When `exclude_user_id` is supplied we also enforce *mutual gender
+-- eligibility*:
+--   • the searcher's `looking_for` must be 'all' (or unset) or match the
+--     candidate's gender
+--   • the candidate's `looking_for` must be 'all' (or unset) or match the
+--     searcher's gender
+-- This means brand-new users who haven't set preferences yet are still
+-- visible (and can still see others) until they fill them in.
 DROP FUNCTION IF EXISTS public.nearby_users;
 create or replace function public.nearby_users(
   lat              float8,
@@ -51,6 +60,11 @@ language sql
 stable
 security definer
 as $$
+  with searcher as (
+    select gender, looking_for
+    from public.user_details
+    where user_id = exclude_user_id
+  )
   select
     (to_jsonb(ud) - 'location') as user_data,
     (
@@ -65,13 +79,28 @@ as $$
       ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography
     ) / 1609.344 as distance_miles
   from public.user_details ud
+  left join searcher s on true
   where
     ud.location is not null
-    -- and (exclude_user_id is null or ud.user_id <> exclude_user_id)
+    and (exclude_user_id is null or ud.user_id <> exclude_user_id)
     and ST_DWithin(
       ud.location,
       ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
       radius_miles * 1609.344  -- convert miles → metres
+    )
+    -- Searcher's looking_for must include this candidate's gender
+    and (
+      exclude_user_id is null
+      or s.looking_for is null
+      or s.looking_for = 'all'
+      or s.looking_for = ud.gender
+    )
+    -- Candidate's looking_for must include the searcher's gender (mutual)
+    and (
+      exclude_user_id is null
+      or ud.looking_for is null
+      or ud.looking_for = 'all'
+      or ud.looking_for = s.gender
     )
   order by distance_miles asc;
 $$;

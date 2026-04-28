@@ -16,17 +16,50 @@ const FLOWBITE_INPUT_BASE =
 const NUMBER_INPUT_NO_SPIN =
   '[-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
 
-interface CustomTextInputProps extends Omit<TextInputProps, 'prefix'> {
+type Sizing = 'sm' | 'md' | 'lg' | 'xl';
+
+interface CustomTextInputProps extends Omit<TextInputProps, 'prefix' | 'sizing'> {
   // Optional right-side suffix (e.g., %, months)
   suffix?: React.ReactNode;
   // Optional left-side prefix (e.g., $)
   prefix?: React.ReactNode;
+  /**
+   * Field size token. Drives input height, padding, and text size in lockstep
+   * — and the affordance offsets (suffix gutter, password eye button) so the
+   * input scales as a unit. Defaults to `md` (≈42px tall) to match the
+   * historical Pulse design.
+   */
+  sizing?: Sizing;
   /**
    * Classes for the native `<input>`. Flowbite only puts `className` on its outer wrapper, not the
    * input, so typography utilities on `className` often do not affect the field — use this instead.
    */
   inputClassName?: string;
 }
+
+/**
+ * Per-size spec for the input. Keeps the typography / padding / height in
+ * lockstep with the absolutely-positioned suffix gutter and password eye
+ * button so all four sizes look balanced.
+ *
+ * `input`        → tailwind classes applied to the native <input> (height,
+ *                  padding, text size).
+ * `affordancePx` → reserved padding inside the input that the absolutely-
+ *                  positioned suffix / eye button sits on top of.
+ * `eyeMaxPx`     → max-height for the password-toggle button.
+ * `iconClass`    → tailwind size class for the password eye icon.
+ */
+const SIZE_SPECS: Record<Sizing, {
+  input: string;
+  affordancePx: number;
+  eyeMaxPx: number;
+  iconClass: string;
+}> = {
+  sm: { input: 'h-9 px-3 py-1 text-xs',         affordancePx: 30, eyeMaxPx: 36, iconClass: 'w-4 h-4' },
+  md: { input: 'h-[38px] px-3.5 py-1.5 text-sm',    affordancePx: 36, eyeMaxPx: 42, iconClass: 'w-5 h-5' },
+  lg: { input: 'h-12 px-4 py-2 text-base',        affordancePx: 40, eyeMaxPx: 48, iconClass: 'w-5 h-5' },
+  xl: { input: 'h-14 px-5 py-2.5 text-lg',        affordancePx: 48, eyeMaxPx: 56, iconClass: 'w-6 h-6' },
+};
 
 // Define the custom theme for TextInput
 const textInputTheme = {
@@ -51,30 +84,40 @@ const textInputTheme = {
         on: 'rounded-r-lg',
         off: '',
       },
-      /** Flowbite defaults add `text-sm` / `sm:text-xs` on sizes; keep padding only. */
+      /**
+       * Heights / paddings / text sizes live exclusively here so the `sizing`
+       * prop is the single source of truth. Colors below intentionally do not
+       * set their own height — see `SIZE_SPECS` for the matching gutters.
+       */
       sizes: {
-        sm: '',
-        md: '',
-        lg: '',
+        sm: SIZE_SPECS.sm.input,
+        md: SIZE_SPECS.md.input,
+        lg: SIZE_SPECS.lg.input,
+        xl: SIZE_SPECS.xl.input,
       },
       colors: {
         // Pulse design-system input style
         pulse:
-          '!rounded-lg h-[42px] border-gray-300 bg-white text-gray-900 ' +
+          '!rounded-lg border-gray-300 bg-white text-gray-900 ' +
           'focus:border-[#D90429] focus:ring-[#D90429]/20 ' +
           'placeholder-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-white',
+        'pulse-primary':
+          '!rounded-lg border-[#fecaca] bg-white text-[#1d1a20] ' +
+          'focus:border-[#D90429] focus:ring-[#dc2626]/20 ' +
+          'placeholder:text-[#94a3b8] dark:border-gray-600 dark:bg-gray-800 dark:text-white',
         ghost: '!rounded-[0px] text-right !p-0 bg-transparent border-none text-gray-600 focus:border-none focus:ring-0 focus:outline-none dark:border-none dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-none dark:focus:ring-0',
-        gray: '!rounded h-[38px] border-gray-300 bg-gray-50 text-gray-900 focus:border-wasabi-600 focus:ring-wasabi-600 dark:border-input-stroke bg-white dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500',
+        gray: '!rounded border-gray-300 bg-gray-50 text-gray-900 focus:border-wasabi-600 focus:ring-wasabi-600 dark:border-input-stroke bg-white dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500',
         altghost:
-          '!rounded h-[38px] bg-transparent border-gray-300 text-gray-900 focus:border-wasabi-600 focus:ring-wasabi-600 dark:border-input-stroke dark:text-white dark:placeholder-gray-400 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500',
+          '!rounded bg-transparent border-gray-300 text-gray-900 focus:border-wasabi-600 focus:ring-wasabi-600 dark:border-input-stroke dark:text-white dark:placeholder-gray-400 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500',
       },
     },
   },
 };
 
 const TextInput = React.forwardRef<HTMLInputElement, CustomTextInputProps>(
-  ({ type, className, suffix, prefix, inputClassName, ...props }, ref) => {
+  ({ type, className, suffix, prefix, inputClassName, sizing = 'md', ...props }, ref) => {
     const [showPassword, setShowPassword] = useState<boolean>(false);
+    const spec = SIZE_SPECS[sizing];
 
     const theme = useMemo(() => {
       const noSpin = type === 'number' ? NUMBER_INPUT_NO_SPIN : '';
@@ -100,12 +143,12 @@ const TextInput = React.forwardRef<HTMLInputElement, CustomTextInputProps>(
     };
 
     const calcPaddingRight = () => {
-      if (type === 'password') return '36px';
-      if (suffix) return '36px';
+      if (type === 'password') return `${spec.affordancePx}px`;
+      if (suffix) return `${spec.affordancePx}px`;
       return '';
     };
     const calcPaddingLeft = () => {
-      if (prefix) return '28px';
+      if (prefix) return `${Math.round(spec.affordancePx * 0.78)}px`;
       return '';
     };
 
@@ -115,6 +158,7 @@ const TextInput = React.forwardRef<HTMLInputElement, CustomTextInputProps>(
           style={{ paddingRight: calcPaddingRight(), paddingLeft: calcPaddingLeft() }}
           type={inputType}
           theme={theme}
+          sizing={sizing}
           ref={ref}
           {...props}
         />
@@ -124,11 +168,20 @@ const TextInput = React.forwardRef<HTMLInputElement, CustomTextInputProps>(
             type="button"
             onClick={togglePasswordVisibility}
             className="absolute inset-y-0 right-1 flex items-center px-1 text-gray-600 focus:outline-none"
-            style={{ maxHeight: '42px' }}
+            style={{ maxHeight: `${spec.eyeMaxPx}px` }}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             <IconContext.Provider
-              value={{ className: (props?.color === 'failure' ? 'text-gray-900' : props?.color === 'ghost' ? 'text-white' : 'text-gray-500') + ' w-5 h-5 ' }}
+              value={{
+                className:
+                  (props?.color === 'failure'
+                    ? 'text-gray-900'
+                    : props?.color === 'ghost'
+                      ? 'text-white'
+                      : 'text-gray-500') +
+                  ' ' +
+                  spec.iconClass,
+              }}
             >
               {showPassword ? <PiEyeSlash /> : <PiEyeLight />}
             </IconContext.Provider>

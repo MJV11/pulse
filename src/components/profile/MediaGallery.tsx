@@ -74,7 +74,7 @@ export function MediaGallery({ userId, photos, loading, addPhoto, removePhoto }:
     <div className="col-span-4 flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <PiImage size={18} className="text-[#dc2626]" />
+          <PiImage size={24} className="text-[#dc2626]" />
           <h2 className="text-[#1d1a20] font-bold text-xl">Photos</h2>
           {photos.length > 0 && (
             <span className="text-[#94a3b8] text-sm font-medium">{photos.length}/{MAX_PHOTOS}</span>

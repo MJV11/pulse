@@ -54,6 +54,7 @@ function toProfile(user: NearbyUser): DiscoveryProfile {
     name: user.user_name ?? 'Unknown',
     age: calculateAge(user.birthday) ?? undefined,
     photo: photoUrl,
+    bio: user.bio,
     distance: distanceLabel,
     verified: false,
     interests: user.sports ?? [],

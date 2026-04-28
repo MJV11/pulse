@@ -44,16 +44,23 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
 /**
  * PUT /api/users/me
  * Upserts the authenticated user's profile.
- * Accepted body fields: user_name, bio, birthday (YYYY-MM-DD), sports
+ * Accepted body fields: user_name, bio, birthday (YYYY-MM-DD), sports,
+ * gender ('man' | 'woman' | 'nonbinary'),
+ * looking_for ('man' | 'woman' | 'nonbinary' | 'all').
  */
+const ALLOWED_GENDERS = new Set(['man', 'woman', 'nonbinary']);
+const ALLOWED_LOOKING_FOR = new Set(['man', 'woman', 'nonbinary', 'all']);
+
 router.put('/me', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
 
-  const { user_name, bio, birthday, sports } = req.body as {
+  const { user_name, bio, birthday, sports, gender, looking_for } = req.body as {
     user_name?: string;
     bio?: string;
     birthday?: string | null;
     sports?: string[];
+    gender?: string | null;
+    looking_for?: string | null;
   };
 
   if (sports !== undefined && !Array.isArray(sports)) {
@@ -63,6 +70,24 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
 
   if (sports !== undefined && !sports.every((s) => typeof s === 'string')) {
     res.status(400).json({ error: { message: '`sports` must contain only strings' } });
+    return;
+  }
+
+  if (gender !== undefined && gender !== null && !ALLOWED_GENDERS.has(gender)) {
+    res.status(400).json({
+      error: { message: '`gender` must be one of "man", "woman", "nonbinary"' },
+    });
+    return;
+  }
+
+  if (
+    looking_for !== undefined &&
+    looking_for !== null &&
+    !ALLOWED_LOOKING_FOR.has(looking_for)
+  ) {
+    res.status(400).json({
+      error: { message: '`looking_for` must be one of "man", "woman", "nonbinary", "all"' },
+    });
     return;
   }
 
@@ -96,6 +121,8 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
   if (bio !== undefined) patch.bio = bio;
   if (birthday !== undefined) patch.birthday = birthday;
   if (sports !== undefined) patch.sports = sports;
+  if (gender !== undefined) patch.gender = gender;
+  if (looking_for !== undefined) patch.looking_for = looking_for;
 
   try {
     const { data, error } = await supabase

@@ -16,6 +16,8 @@ export interface NearbyUser {
   birthday: string | null
   sports: string[]
   rating: number | null
+  gender: 'man' | 'woman' | 'nonbinary' | null
+  looking_for: 'man' | 'woman' | 'nonbinary' | 'all' | null
   first_photo_path: string | null
   distance_miles: number
   // Forward-compatibility escape hatch for newly added user_details columns

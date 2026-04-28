@@ -2,6 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
 
+/** How a user identifies themselves. */
+export type Gender = 'man' | 'woman' | 'nonbinary'
+
+/** Who a user is interested in seeing in their discovery feed. */
+export type LookingFor = 'man' | 'woman' | 'nonbinary' | 'all'
+
 export interface UserProfile {
   user_id: string
   user_name: string | null
@@ -10,6 +16,10 @@ export interface UserProfile {
   birthday: string | null
   sports: string[]
   rating: number | null
+  /** The user's own gender, or null if they haven't set one yet. */
+  gender: Gender | null
+  /** Who the user wants to see in discovery, or null if unset. */
+  looking_for: LookingFor | null
   /** Storage path of the user's first gallery photo (lowest position), or null. */
   first_photo_path: string | null
   /**

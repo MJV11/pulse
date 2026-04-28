@@ -60,6 +60,7 @@ export interface DiscoveryProfile {
   name: string
   age?: number
   photo?: string
+  bio?: string | null
   distance: string
   verified: boolean
   interests: string[]
