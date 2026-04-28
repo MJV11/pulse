@@ -31,16 +31,16 @@ interface CustomTextInputProps extends Omit<TextInputProps, 'prefix'> {
 // Define the custom theme for TextInput
 const textInputTheme = {
   addon:
-    'inline-flex items-center border border-r-0 border-silicongray-300 bg-silicongray-200 px-3 text-silicongray-900 dark:border-silicongray-600 dark:bg-silicongray-600 dark:text-silicongray-400',
+    'inline-flex items-center border border-r-0 border-gray-300 bg-gray-200 px-3 text-gray-900 dark:border-gray-600 dark:bg-gray-600 dark:text-gray-400',
   field: {
     base: 'relative w-full',
     icon: {
       base: 'pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3',
-      svg: 'h-5 w-5 text-silicongray-700 dark:text-silicongray-300',
+      svg: 'h-5 w-5 text-gray-700 dark:text-gray-300',
     },
     rightIcon: {
       base: 'pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3',
-      svg: 'h-5 w-5 text-silicongray-700 dark:text-silicongray-500',
+      svg: 'h-5 w-5 text-gray-700 dark:text-gray-500',
     },
     input: {
       /**
@@ -63,10 +63,10 @@ const textInputTheme = {
           '!rounded-lg h-[42px] border-gray-300 bg-white text-gray-900 ' +
           'focus:border-[#D90429] focus:ring-[#D90429]/20 ' +
           'placeholder-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-white',
-        ghost: '!rounded-[0px] text-right !p-0 bg-transparent border-none text-silicongray-600 focus:border-none focus:ring-0 focus:outline-none dark:border-none dark:text-silicongray-100 dark:placeholder-silicongray-500 dark:focus:border-none dark:focus:ring-0',
-        gray: '!rounded h-[38px] border-silicongray-300 bg-silicongray-50 text-silicongray-900 focus:border-wasabi-600 focus:ring-wasabi-600 dark:border-input-stroke bg-white dark:bg-silicongray-800 dark:text-white dark:placeholder-silicongray-400 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500',
+        ghost: '!rounded-[0px] text-right !p-0 bg-transparent border-none text-gray-600 focus:border-none focus:ring-0 focus:outline-none dark:border-none dark:text-gray-100 dark:placeholder-gray-500 dark:focus:border-none dark:focus:ring-0',
+        gray: '!rounded h-[38px] border-gray-300 bg-gray-50 text-gray-900 focus:border-wasabi-600 focus:ring-wasabi-600 dark:border-input-stroke bg-white dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500',
         altghost:
-          '!rounded h-[38px] bg-transparent border-silicongray-300 text-silicongray-900 focus:border-wasabi-600 focus:ring-wasabi-600 dark:border-input-stroke dark:text-white dark:placeholder-silicongray-400 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500',
+          '!rounded h-[38px] bg-transparent border-gray-300 text-gray-900 focus:border-wasabi-600 focus:ring-wasabi-600 dark:border-input-stroke dark:text-white dark:placeholder-gray-400 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500',
       },
     },
   },
@@ -123,12 +123,12 @@ const TextInput = React.forwardRef<HTMLInputElement, CustomTextInputProps>(
           <button
             type="button"
             onClick={togglePasswordVisibility}
-            className="absolute inset-y-0 right-1 flex items-center px-1 text-silicongray-600 focus:outline-none"
+            className="absolute inset-y-0 right-1 flex items-center px-1 text-gray-600 focus:outline-none"
             style={{ maxHeight: '42px' }}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             <IconContext.Provider
-              value={{ className: (props?.color === 'failure' ? 'text-silicongray-900' : props?.color === 'ghost' ? 'text-white' : 'text-gray-500') + ' w-5 h-5 ' }}
+              value={{ className: (props?.color === 'failure' ? 'text-gray-900' : props?.color === 'ghost' ? 'text-white' : 'text-gray-500') + ' w-5 h-5 ' }}
             >
               {showPassword ? <PiEyeSlash /> : <PiEyeLight />}
             </IconContext.Provider>
@@ -137,7 +137,7 @@ const TextInput = React.forwardRef<HTMLInputElement, CustomTextInputProps>(
 
         {suffix && type !== 'password' && (
           <span
-            className="absolute inset-y-0 right-2 flex items-center text-xs text-silicongray-700 dark:text-silicongray-300 pointer-events-none"
+            className="absolute inset-y-0 right-2 flex items-center text-xs text-gray-700 dark:text-gray-300 pointer-events-none"
             aria-hidden
           >
             {suffix}
@@ -146,7 +146,7 @@ const TextInput = React.forwardRef<HTMLInputElement, CustomTextInputProps>(
 
         {prefix && (
           <span
-            className="absolute inset-y-0 left-2 flex items-center text-xs text-silicongray-700 dark:text-silicongray-300 pointer-events-none"
+            className="absolute inset-y-0 left-2 flex items-center text-xs text-gray-700 dark:text-gray-300 pointer-events-none"
             aria-hidden
           >
             {prefix}

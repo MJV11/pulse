@@ -8,9 +8,9 @@ const baseTheme: Partial<CustomFlowbiteTheme['checkbox']> = {
   root: {
     base: 'rounded border focus:ring-0', // generic shape
     color: {
-      default: 'text-silicongray-600 border-silicongray-500',
+      default: 'text-gray-600 border-gray-500',
       wasabi:
-        'text-wasabi-500 border-silicongray-400 dark:border-silicongray-600 selected:border-wasabi-500 bg-silicongray-300 dark:bg-silicongray-700',
+        'text-wasabi-500 border-gray-400 dark:border-gray-600 selected:border-wasabi-500 bg-gray-300 dark:bg-gray-700',
     },
   },
 };

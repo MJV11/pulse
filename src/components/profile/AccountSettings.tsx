@@ -8,6 +8,7 @@ import {
   PROFILE_ICON_SETTINGS,
   PROFILE_NAV_SIGNOUT,
 } from '../../lib/assets'
+import { StravaIntegrationRow } from './StravaIntegrationRow'
 
 interface SettingRow {
   id: string
@@ -92,6 +93,17 @@ export function AccountSettings() {
             onToggle={() => handleToggle(row.id)}
           />
         ))}
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-[#f1f5f9]" />
+
+      {/* Integrations */}
+      <div className="flex flex-col gap-3">
+        <h3 className="text-[#534342] font-semibold text-xs uppercase tracking-[1.2px] px-4">
+          Integrations
+        </h3>
+        <StravaIntegrationRow />
       </div>
 
       {/* Divider */}

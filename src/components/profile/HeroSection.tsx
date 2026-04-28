@@ -1,13 +1,12 @@
 import {
-  PROFILE_COVER,
   PROFILE_ICON_LOCATION,
-  PROFILE_ICON_SHARE,
 } from '../../lib/assets'
+import { Button } from '../flowbite-proxy'
+import { PiShareNetwork } from 'react-icons/pi'
 
 interface HeroSectionProps {
   userName: string | null
   rating: number | null
-  photoUrl: string | null
   isEditing: boolean
   onNameChange: (name: string) => void
   onEditClick: () => void
@@ -16,19 +15,10 @@ interface HeroSectionProps {
   saving: boolean
 }
 
-function makeInitials(name: string | null): string {
-  return (name ?? '?')
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
 
 export function HeroSection({
   userName,
   rating,
-  photoUrl,
   isEditing,
   onNameChange,
   onEditClick,
@@ -40,42 +30,12 @@ export function HeroSection({
 
   return (
     <div className="bg-white border border-[rgba(254,242,242,0.5)] rounded-2xl shadow-[0px_8px_30px_0px_rgba(0,0,0,0.04)] overflow-hidden">
-      {/* Cover */}
-      <div className="relative h-80 bg-gray-100">
-        <img
-          src={PROFILE_COVER}
-          alt="Cover"
-          className="w-full h-full object-cover opacity-10"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-transparent" />
-      </div>
-
       {/* Profile info row */}
-      <div className="px-[33px] pb-[33px] -mt-24 flex items-end justify-between">
+      <div className="p-6 flex items-end justify-between">
         {/* Photo + name */}
         <div className="flex items-end gap-6">
-          {/* Photo card */}
-          <div className="bg-white rounded-3xl p-[6px] shadow-[0px_20px_25px_-5px_rgba(0,0,0,0.1)] shrink-0">
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt={displayName}
-                className="w-[148px] h-[148px] rounded-2xl object-cover"
-              />
-            ) : (
-              <div
-                className="w-[148px] h-[148px] rounded-2xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)' }}
-              >
-                <span className="text-white font-extrabold text-5xl select-none">
-                  {makeInitials(userName)}
-                </span>
-              </div>
-            )}
-          </div>
-
           {/* Name + rating */}
-          <div className="pb-2 flex flex-col gap-1.5">
+          <div className="pb-2 flex flex-row items-end gap-4">
             {isEditing ? (
               <input
                 autoFocus
@@ -115,45 +75,36 @@ export function HeroSection({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-3 pb-2">
+        <div className="flex items-center gap-3">
           {isEditing ? (
             <>
-              <button
+              <Button
                 onClick={onCancel}
                 disabled={saving}
-                className="border border-[#e2e8f0] text-[#64748b] font-semibold text-[14px] px-6 py-[15px] rounded-2xl hover:bg-[#f8fafc] transition-colors disabled:opacity-50"
+                color="alt"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={onSave}
                 disabled={saving || !userName?.trim()}
-                className="bg-[#dc2626] text-white font-semibold text-[14px] px-6 py-[15px] rounded-2xl shadow-[0px_4px_14px_0px_rgba(217,4,41,0.3)] hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                isProcessing={saving}
+                color='pulse-primary'
               >
-                {saving ? (
-                  <>
-                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                    Saving…
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </button>
+                Save Changes
+              </Button>
             </>
           ) : (
             <>
-              <button
+              <Button
                 onClick={onEditClick}
-                className="bg-[#dc2626] text-white font-semibold text-[14px] px-6 py-[15px] rounded-2xl shadow-[0px_4px_14px_0px_rgba(217,4,41,0.3)] hover:opacity-90 transition-opacity"
+                color='pulse-primary'
               >
                 Edit Profile
-              </button>
-              <button className="bg-[#fef2f2] p-3 rounded-2xl hover:bg-[#fee2e2] transition-colors">
-                <img src={PROFILE_ICON_SHARE} alt="Share" className="w-[18px] h-[20px] object-contain" />
-              </button>
+              </Button>
+              <Button color='alt'>
+                <PiShareNetwork size={20} />
+              </Button>
             </>
           )}
         </div>

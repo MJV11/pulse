@@ -10,7 +10,7 @@ const badgeTheme = {
   root: {
     base: 'inline-flex h-fit items-center gap-1 text-sm font-semibold transition-all duration-300',
     color: {
-      gray: 'bg-silicongray-100 text-silicongray-800 dark:bg-silicongray-700 dark:text-silicongray-100',
+      gray: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100',
       red: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       yellow: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       green: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -24,8 +24,8 @@ const badgeTheme = {
       failure: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      dark: 'bg-silicongray-800 text-silicongray-100 dark:bg-silicongray-200 dark:text-silicongray-800',
-      filter: 'bg-silicongray-100 text-silicongray-800 dark:bg-silicongray-800 dark:text-silicongray-100',
+      dark: 'bg-gray-800 text-gray-100 dark:bg-gray-200 dark:text-gray-800',
+      filter: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100',
     },
     href: 'group',
     size: {

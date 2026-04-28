@@ -44,6 +44,10 @@ async function getStaticRouter(config: LazyRouterConfig): Promise<unknown> {
       const { likesRouter } = await import('../routes/likes/index.ts');
       return likesRouter;
     }
+    case 'strava': {
+      const { stravaRouter } = await import('../routes/strava/index.ts');
+      return stravaRouter;
+    }
     default:
       throw new Error(
         `Unknown router key: "${config.key}". Add it to getStaticRouter in utils/lazyRouter.ts.`,

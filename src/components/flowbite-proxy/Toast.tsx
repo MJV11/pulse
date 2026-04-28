@@ -10,7 +10,7 @@ import clsx from 'clsx';
 
 const baseTheme: Partial<CustomFlowbiteTheme['toast']> = {
   root: {
-    base: `flex items-center gap-4 px-4 py-2 w-full rounded-lg border bg-white text-silicongray-800 dark:bg-silicongray-800 dark:text-white border-silicongray-200 dark:border-silicongray-700 
+    base: `flex items-center gap-4 px-4 py-2 w-full rounded-lg border bg-white text-gray-800 dark:bg-gray-800 dark:text-white border-gray-200 dark:border-gray-700 
         shadow-md hover:brightness-110 hover:-translate-y-1`,
     closed: '',
   },
@@ -29,7 +29,7 @@ type ToastColor = 'default' | 'success' | 'failure' | 'info' | 'warning';
 // Color class map -------------------------------------------------------------
 const colorClasses: Record<ToastColor, string> = {
   default:
-    'bg-white text-silicongray-800 border-silicongray-200 dark:bg-silicongray-800 dark:text-white dark:border-silicongray-700',
+    'bg-white text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-white dark:border-gray-700',
   success: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700',
   failure: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700',
   info: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700',
@@ -39,7 +39,7 @@ const colorClasses: Record<ToastColor, string> = {
 
 // Toggle colour classes -------------------------------------------------------
 const toggleColorClasses: Record<ToastColor, string> = {
-  default: 'text-silicongray-600 hover:text-silicongray-900 dark:text-silicongray-400 dark:hover:text-white',
+  default: 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white',
   success: 'text-green-600 hover:text-green-800 dark:text-green-300 dark:hover:text-green-100',
   failure: 'text-red-600 hover:text-red-800 dark:text-red-300 dark:hover:text-red-100',
   info: 'text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100',

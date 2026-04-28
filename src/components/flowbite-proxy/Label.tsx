@@ -6,7 +6,7 @@ const labelTheme = {
   root: {
     base: 'text-sm font-normal',
     colors: {
-      default: 'text-silicongray-900 dark:text-silicongray-300',
+      default: 'text-gray-900 dark:text-gray-300',
       white: 'text-black dark:text-white',
       pulse: 'text-gray-700 dark:text-gray-300',
     },

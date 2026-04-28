@@ -10,6 +10,7 @@ import { DiscoveryPage } from './pages/DiscoveryPage'
 import { MatchesPage } from './pages/MatchesPage'
 import { MessagesPage } from './pages/MessagesPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { StravaCallbackPage } from './pages/StravaCallbackPage'
 import { useLocationSync } from './hooks/useLocationSync'
 
 /** Mounts inside AuthProvider so it can access the session. Renders nothing. */
@@ -55,6 +56,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/integrations/strava/callback"
+              element={
+                <ProtectedRoute>
+                  <StravaCallbackPage />
                 </ProtectedRoute>
               }
             />

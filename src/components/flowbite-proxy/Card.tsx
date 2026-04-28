@@ -4,7 +4,7 @@ import { Card as FlowbiteCard, CardProps } from 'flowbite-react';
 
 const cardTheme = {
   root: {
-    base: 'flex rounded-md bg-silicongray-50 border border-silicongray-200 dark:border-silicongray-700 dark:bg-card-bg-primary p-0',
+    base: 'flex rounded-md bg-gray-50 border border-gray-200 dark:border-gray-700 dark:bg-card-bg-primary p-0',
   },
 };
 

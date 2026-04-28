@@ -12,7 +12,7 @@ import {
 const timelineTheme = {
   root: {
     direction: {
-      vertical: 'relative border-s border-silicongray-700',
+      vertical: 'relative border-s border-gray-700',
       horizontal: 'sm:flex',
     },
   },
@@ -40,18 +40,18 @@ const timelineTheme = {
     point: {
       vertical: '',
       horizontal: '',
-      line: 'hidden h-0.5 w-full bg-silicongray-700 sm:flex',
+      line: 'hidden h-0.5 w-full bg-gray-700 sm:flex',
       marker: {
         base: {
           vertical:
-            'absolute -start-3 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-[#0f0f0f] bg-silicongray-800 border border-silicongray-600',
+            'absolute -start-3 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-[#0f0f0f] bg-gray-800 border border-gray-600',
           horizontal:
-            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full ring-4 ring-[#0f0f0f] bg-silicongray-800 border border-silicongray-600',
+            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full ring-4 ring-[#0f0f0f] bg-gray-800 border border-gray-600',
         },
         icon: {
           base: 'h-3 w-3 text-white',
           wrapper:
-            'absolute -start-3 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-[#0f0f0f] bg-silicongray-800 border border-silicongray-600',
+            'absolute -start-3 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-[#0f0f0f] bg-gray-800 border border-gray-600',
         },
       },
     },

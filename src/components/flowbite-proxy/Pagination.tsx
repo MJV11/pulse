@@ -7,22 +7,22 @@ import { HiChevronDoubleLeft, HiChevronDoubleRight } from 'react-icons/hi';
 const paginationTheme = {
   layout: {
     table: {
-      base: 'text-sm text-silicongray-700 dark:text-silicongray-400',
-      span: 'font-semibold text-silicongray-900 dark:text-white',
+      base: 'text-sm text-gray-700 dark:text-gray-400',
+      span: 'font-semibold text-gray-900 dark:text-white',
     },
   },
   pages: {
     base: 'inline-flex -space-x-px',
     previous: {
-      base: 'ml-0 border border-silicongray-300 bg-white px-2 sm:px-3 py-2 leading-tight text-silicongray-500 enabled:hover:bg-silicongray-100 enabled:hover:text-silicongray-700 dark:border-silicongray-700 dark:bg-silicongray-800 dark:text-silicongray-400 enabled:dark:hover:bg-silicongray-700 enabled:dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed',
+      base: 'ml-0 border border-gray-300 bg-white px-2 sm:px-3 py-2 leading-tight text-gray-500 enabled:hover:bg-gray-100 enabled:hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 enabled:dark:hover:bg-gray-700 enabled:dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed',
     },
     next: {
-      base: 'border border-silicongray-300 bg-white px-2 sm:px-3 py-2 leading-tight text-silicongray-500 enabled:hover:bg-silicongray-100 enabled:hover:text-silicongray-700 dark:border-silicongray-700 dark:bg-silicongray-800 dark:text-silicongray-400 enabled:dark:hover:bg-silicongray-700 enabled:dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed',
+      base: 'border border-gray-300 bg-white px-2 sm:px-3 py-2 leading-tight text-gray-500 enabled:hover:bg-gray-100 enabled:hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 enabled:dark:hover:bg-gray-700 enabled:dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed',
     },
     selector: {
-      base: 'w-8 sm:w-10 border border-silicongray-300 bg-white py-2 leading-tight text-silicongray-500 enabled:hover:bg-silicongray-100 enabled:hover:text-silicongray-700 dark:border-silicongray-700 dark:bg-silicongray-800 dark:text-silicongray-400 enabled:dark:hover:bg-silicongray-700 enabled:dark:hover:text-white text-sm',
+      base: 'w-8 sm:w-10 border border-gray-300 bg-white py-2 leading-tight text-gray-500 enabled:hover:bg-gray-100 enabled:hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 enabled:dark:hover:bg-gray-700 enabled:dark:hover:text-white text-sm',
       active:
-        'bg-silicongray-50 text-silicongray-600 hover:bg-silicongray-100 hover:text-silicongray-700 dark:border-silicongray-700 dark:bg-silicongray-700 dark:text-white',
+        'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:text-gray-700 dark:border-gray-700 dark:bg-gray-700 dark:text-white',
     },
   },
 };
@@ -53,7 +53,7 @@ function Pagination({
 
   return (
     <div className="flex flex-col sm:flex-row justify-between items-center w-full gap-2 sm:gap-0">
-      <div className="flex items-center text-xs sm:text-sm text-silicongray-400 sm:order-1 w-full sm:w-auto justify-center sm:justify-start">
+      <div className="flex items-center text-xs sm:text-sm text-gray-400 sm:order-1 w-full sm:w-auto justify-center sm:justify-start">
         Page {currentPage} of {totalPages}
       </div>
       <div className="flex items-center sm:order-2 w-full sm:w-auto justify-center sm:justify-end gap-0">

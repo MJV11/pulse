@@ -18,14 +18,14 @@ const defaultTheme: Partial<CustomFlowbiteTheme['datepicker']> = {
       field: {
         base: '',
         input: {
-          base: 'text-silicongray-700 dark:text-silicongray-200 border border-silicongray-200 dark:border-silicongray-700',
+          base: 'text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700',
           sizes: {
             sm: '',
             md: 'w-full',
             lg: '',
           },
           colors: {
-            gray: 'bg-silicongray-100 dark:bg-silicongray-800 text-silicongray-700 dark:text-silicongray-200',
+            gray: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200',
           },
         },
       },
@@ -33,14 +33,14 @@ const defaultTheme: Partial<CustomFlowbiteTheme['datepicker']> = {
   },
   popup: {
     root: {
-      base: 'mt-2 absolute bg-silicongray-100 dark:bg-silicongray-800 p-3 border border-silicongray-200 dark:border-silicongray-700 rounded shadow-lg z-50',
+      base: 'mt-2 absolute bg-gray-100 dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-50',
       inner: '',
     },
     header: {
       selectors: {
-        base: `flex items-center justify-between gap-3 text-silicongray-700 dark:text-silicongray-200`,
+        base: `flex items-center justify-between gap-3 text-gray-700 dark:text-gray-200`,
         button: {
-          base: 'hover:text-silicongray-900 dark:hover:text-silicongray-100 transition-colors duration-300 hover:bg-silicongray-100 dark:hover:bg-silicongray-900 rounded-full p-1',
+          base: 'hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-300 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-full p-1',
           prev: 'rounded py-2 px-2',
           next: 'rounded py-2 px-2',
           view: 'rounded py-1 px-2',
@@ -48,12 +48,12 @@ const defaultTheme: Partial<CustomFlowbiteTheme['datepicker']> = {
       },
     },
     view: {
-      base: 'text-silicongray-700 dark:text-silicongray-200',
+      base: 'text-gray-700 dark:text-gray-200',
     },
     footer: {
       button: {
         today:
-          'justify-center gap-3 text-silicongray-900 dark:text-white hover:text-silicongray-800 hover:dark:text-silicongray-200 bg-wasabi-600 hover:bg-wasabi-700',
+          'justify-center gap-3 text-gray-900 dark:text-white hover:text-gray-800 hover:dark:text-gray-200 bg-wasabi-600 hover:bg-wasabi-700',
       },
     },
   },
@@ -61,11 +61,11 @@ const defaultTheme: Partial<CustomFlowbiteTheme['datepicker']> = {
     days: {
       header: {
         //base: '',
-        title: 'font-[500] text-center text-silicongray-600 dark:text-silicongray-300',
+        title: 'font-[500] text-center text-gray-600 dark:text-gray-300',
       },
       items: {
         item: {
-          base: 'text-center text-md rounded p-0.5 text-silicongray-800 dark:text-silicongray-100 hover:bg-silicongray-50 dark:hover:bg-silicongray-900',
+          base: 'text-center text-md rounded p-0.5 text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900',
           selected: 'bg-wasabi-600 text-white hover:bg-wasabi-700 dark:hover:bg-wasabi-700',
         },
       },

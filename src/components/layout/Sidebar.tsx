@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { currentUser } from '../../lib/data'
 import {
   PiCompass,
   PiHeart,
@@ -11,6 +10,11 @@ import {
 } from 'react-icons/pi'
 import type { IconType } from 'react-icons'
 
+/**
+ * `variant` is kept as an optional prop for backwards compatibility with
+ * existing pages, but the sidebar now renders an identical bottom section
+ * (Pulse Premium upsell + Settings + Sign Out) on every page.
+ */
 export type SidebarVariant = 'discovery' | 'messages' | 'profile'
 
 interface NavItem {
@@ -27,10 +31,10 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 interface SidebarProps {
-  variant: SidebarVariant
+  variant?: SidebarVariant
 }
 
-export function Sidebar({ variant }: SidebarProps) {
+export function Sidebar({ variant: _variant }: SidebarProps = {}) {
   return (
     <aside className="fixed top-0 left-0 h-full w-[288px] bg-white border-r border-[#f1f5f9] flex flex-col py-8 z-30 shadow-[0px_25px_50px_-12px_rgba(127,29,29,0.05)]">
       {/* Logo */}
@@ -64,11 +68,10 @@ export function Sidebar({ variant }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Bottom section — varies by page context */}
-      <div className="px-6 pt-6">
-        {variant === 'discovery' && <PremiumCard />}
-        {variant === 'messages' && <UserProfileCard />}
-        {variant === 'profile' && <ProfileBottomNav />}
+      {/* Bottom section — identical on every page */}
+      <div className="px-6 pt-6 flex flex-col gap-4">
+        <PremiumCard />
+        <ProfileBottomNav />
       </div>
     </aside>
   )
@@ -87,22 +90,6 @@ function PremiumCard() {
       >
         Upgrade Now
       </button>
-    </div>
-  )
-}
-
-function UserProfileCard() {
-  return (
-    <div className="bg-[#fef2f2] border border-[rgba(254,226,226,0.2)] rounded-2xl p-[13px] flex items-center gap-3">
-      <img
-        src={currentUser.avatar}
-        alt={currentUser.name}
-        className="w-10 h-10 rounded-full object-cover shrink-0"
-      />
-      <div className="min-w-0">
-        <p className="font-bold text-[14px] text-[#131b2e] truncate">{currentUser.name}</p>
-        <p className="font-medium text-[12px] text-[#dc2626] truncate">{currentUser.plan}</p>
-      </div>
     </div>
   )
 }

@@ -32,7 +32,7 @@ export interface CustomTooltipProps extends TooltipProps {
 
 const variantClasses: Record<NonNullable<CustomTooltipProps['variant']>, string> = {
   primary:
-    'text-silicongray-900 bg-white dark:text-white dark:bg-silicongray-800 shadow-lg border border-silicongray-200 dark:border-silicongray-700',
+    'text-gray-900 bg-white dark:text-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700',
 };
 
 const ARROW_SIDE: Record<string, string> = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
@@ -89,18 +89,18 @@ function PortalTooltip({
             style={{ ...floatingStyles, zIndex: 9999 }}
             className={clsx(
               'inline-block rounded-lg px-3 py-2 text-sm font-medium shadow-sm',
-              'border border-silicongray-200 dark:border-silicongray-700',
-              'bg-white dark:bg-silicongray-800',
+              'border border-gray-200 dark:border-gray-700',
+              'bg-white dark:bg-gray-800',
               'transition-opacity duration-300',
               open ? 'opacity-100 visible' : 'invisible opacity-0 pointer-events-none',
             )}
           >
-            <div className="relative z-20 text-xs font-medium whitespace-normal break-words text-pretty text-center max-w-[22rem] sm:max-w-[26rem] text-silicongray-900 dark:text-white">
+            <div className="relative z-20 text-xs font-medium whitespace-normal break-words text-pretty text-center max-w-[22rem] sm:max-w-[26rem] text-gray-900 dark:text-white">
               {content}
             </div>
             <div
               ref={arrowRef}
-              className="absolute z-10 h-2 w-2 rotate-45 bg-white dark:bg-silicongray-800 border-r border-b border-silicongray-200 dark:border-silicongray-700"
+              className="absolute z-10 h-2 w-2 rotate-45 bg-white dark:bg-gray-800 border-r border-b border-gray-200 dark:border-gray-700"
               style={{
                 [arrowSide]: '-4px',
                 left: arrowX != null ? arrowX : undefined,
@@ -138,7 +138,7 @@ function Tooltip({ children, variant = 'primary', className, portal, ...props }:
           base: 'absolute z-10 h-2 w-2 rotate-45',
           style: {
             light:
-              'bg-white border-r border-b border-silicongray-200 dark:bg-silicongray-800 dark:border-r dark:border-b dark:border-silicongray-700',
+              'bg-white border-r border-b border-gray-200 dark:bg-gray-800 dark:border-r dark:border-b dark:border-gray-700',
           },
           placement: '-4px',
         },

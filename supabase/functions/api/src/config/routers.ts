@@ -46,6 +46,12 @@ export const ROUTER_CONFIG: LazyRouterConfig[] = [
     importPath: '../routes/likes/index.ts',
     exportName: 'likesRouter',
   },
+  {
+    path: '/api/strava',
+    key: 'strava',
+    importPath: '../routes/strava/index.ts',
+    exportName: 'stravaRouter',
+  },
 ];
 
 export function validateRouterConfig(config: LazyRouterConfig[]): void {

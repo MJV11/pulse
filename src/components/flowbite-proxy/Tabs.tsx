@@ -11,41 +11,41 @@ export const tabItemTheme = {
   tablist: {
     base: 'flex text-center overflow-x-auto',
     variant: {
-      default: 'flex-nowrap overflow-x-auto border-b border-silicongray-200 dark:border-silicongray-700',
-      underline: 'flex-nowrap overflow-x-auto -mb-px border-b border-silicongray-200 dark:border-silicongray-700',
-      pills: 'flex-nowrap overflow-x-auto font-medium text-sm text-silicongray-500 dark:text-silicongray-400',
+      default: 'flex-nowrap overflow-x-auto border-b border-gray-200 dark:border-gray-700',
+      underline: 'flex-nowrap overflow-x-auto -mb-px border-b border-gray-200 dark:border-gray-700',
+      pills: 'flex-nowrap overflow-x-auto font-medium text-sm text-gray-500 dark:text-gray-400',
       fullWidth:
-        'hidden text-sm font-medium rounded-lg divide-x divide-silicongray-200 shadow sm:flex dark:divide-silicongray-700 dark:text-silicongray-400',
+        'hidden text-sm font-medium rounded-lg divide-x divide-gray-200 shadow sm:flex dark:divide-gray-700 dark:text-gray-400',
     },
     tabitem: {
-      base: 'flex items-center justify-center p-3 text-sm font-medium first:ml-0 disabled:cursor-not-allowed disabled:text-silicongray-400 disabled:dark:text-silicongray-500 shrink-0 whitespace-nowrap',
+      base: 'flex items-center justify-center p-3 text-sm font-medium first:ml-0 disabled:cursor-not-allowed disabled:text-gray-400 disabled:dark:text-gray-500 shrink-0 whitespace-nowrap',
       variant: {
         default: {
           base: 'rounded-t-lg',
           active: {
             on: 'bg-transparent text-wasabi-600 dark:bg-transparent dark:text-wasabi-500 border-b-2 border-wasabi-500',
-            off: 'text-silicongray-500 bg-transparent hover:bg-transparent hover:text-black dark:text-silicongray-400 dark:hover:bg-transparent dark:hover:text-white',
+            off: 'text-gray-500 bg-transparent hover:bg-transparent hover:text-black dark:text-gray-400 dark:hover:bg-transparent dark:hover:text-white',
           },
         },
         underline: {
           base: 'rounded-t-lg',
           active: {
             on: 'text-wasabi-600 rounded-t-lg border-b-2 border-wasabi-600 active dark:text-wasabi-500 dark:border-wasabi-500 ',
-            off: 'border-b-2 border-transparent text-silicongray-500 hover:border-silicongray-300 hover:text-silicongray-600 dark:text-silicongray-400 dark:hover:text-silicongray-300',
+            off: 'border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300',
           },
         },
         pills: {
           base: '',
           active: {
             on: 'rounded-lg bg-wasabi-600 text-white',
-            off: 'rounded-lg hover:text-silicongray-900 hover:bg-silicongray-100 dark:hover:bg-silicongray-800 dark:hover:text-white',
+            off: 'rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-white',
           },
         },
         fullWidth: {
           base: 'ml-2 first:ml-0 w-full first:rounded-l-lg last:rounded-r-lg',
           active: {
-            on: 'inline-block p-4 w-full text-silicongray-900 bg-silicongray-100 focus:ring-4 focus:ring-wasabi-300 active focus:outline-none dark:bg-silicongray-700 dark:text-white',
-            off: 'bg-white hover:text-silicongray-700 hover:bg-silicongray-50 focus:ring-4 focus:ring-wasabi-300 focus:outline-none dark:hover:text-white dark:bg-silicongray-800 dark:hover:bg-silicongray-700',
+            on: 'inline-block p-4 w-full text-gray-900 bg-gray-100 focus:ring-4 focus:ring-wasabi-300 active focus:outline-none dark:bg-gray-700 dark:text-white',
+            off: 'bg-white hover:text-gray-700 hover:bg-gray-50 focus:ring-4 focus:ring-wasabi-300 focus:outline-none dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700',
           },
         },
       },

@@ -8,9 +8,9 @@ const selectTheme = {
   field: {
     select: {
       colors: {
-        gray: 'h-10 border-silicongray-300 bg-silicongray-50 text-silicongray-900 focus:border-wasabi-500 focus:ring-wasabi-500 dark:border-input-stroke dark:bg-silicongray-800 dark:text-white dark:placeholder-silicongray-400 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500 !rounded',
+        gray: 'h-10 border-gray-300 bg-gray-50 text-gray-900 focus:border-wasabi-500 focus:ring-wasabi-500 dark:border-input-stroke dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500 !rounded',
         maluable:
-          'h-[38px] border-silicongray-300 bg-silicongray-0 focus:border-wasabi-500 focus:ring-wasabi-500 dark:border-input-stroke dark:bg-silicongray-900 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500 !rounded',
+          'h-[38px] border-gray-300 bg-gray-0 focus:border-wasabi-500 focus:ring-wasabi-500 dark:border-input-stroke dark:bg-gray-900 dark:focus:border-wasabi-500 dark:focus:ring-wasabi-500 !rounded',
       },
     },
   },
@@ -18,7 +18,7 @@ const selectTheme = {
 
 // Custom styles to override the select arrow color
 const selectStyles: CSSProperties = {
-  // Uses a custom background image with silicongray-300 color (#A7A7A7)
+  // Uses a custom background image with gray-300 color (#A7A7A7)
   backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23A7A7A7' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
   backgroundPosition: 'right 0.5rem center',
   backgroundRepeat: 'no-repeat',

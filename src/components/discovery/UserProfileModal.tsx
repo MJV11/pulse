@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { apiFetch } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import type { NearbyUser } from '../../hooks/useDiscovery'
-import { PiX, PiMapPin, PiStar, PiImage } from 'react-icons/pi'
+import { PiX, PiMapPin, PiImage } from 'react-icons/pi'
 
 interface ProfilePhoto {
   id: string
@@ -26,15 +26,6 @@ const CHIP_STYLES = [
   { bg: 'bg-[#fdf2f8]',              text: 'text-[#be185d]' },
 ]
 
-function makeInitials(name: string | null): string {
-  return (name ?? '?')
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
-
 function getPublicUrl(storagePath: string): string {
   return supabase.storage.from('gallery').getPublicUrl(storagePath).data.publicUrl
 }
@@ -51,7 +42,6 @@ export function UserProfileModal({
   const [photosLoading, setPhotosLoading] = useState(true)
 
   const displayName = user.user_name ?? 'Unknown'
-  const firstPhotoUrl = photos.length > 0 ? getPublicUrl(photos[0].storage_path) : null
 
   useEffect(() => {
     if (!session?.access_token) return
@@ -85,56 +75,14 @@ export function UserProfileModal({
           <PiX size={20} className="text-[#64748b]" />
         </button>
 
-        {/* Hero */}
-        <div className="relative bg-white rounded-t-3xl overflow-hidden">
-          <div className="h-32 bg-gradient-to-br from-[#d90429] to-[#ff4d6d] opacity-20" />
-
-          <div className="px-8 pb-6 -mt-16 flex items-end gap-5">
-            {/* Profile photo (first gallery image) or initials */}
-            <div className="bg-white rounded-2xl p-1.5 shadow-[0px_8px_20px_0px_rgba(0,0,0,0.12)] shrink-0">
-              {firstPhotoUrl && !photosLoading ? (
-                <img
-                  src={firstPhotoUrl}
-                  alt={displayName}
-                  className="w-[100px] h-[100px] rounded-xl object-cover"
-                />
-              ) : (
-                <div
-                  className="w-[100px] h-[100px] rounded-xl flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)' }}
-                >
-                  <span className="text-white font-extrabold text-4xl select-none">
-                    {makeInitials(user.user_name)}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="pb-1 flex flex-col gap-1 min-w-0">
-              <h2 className="text-[#1d1a20] font-extrabold text-2xl tracking-tight leading-none truncate">
-                {displayName}
-              </h2>
-
-              {user.rating != null && (
-                <div className="flex items-center gap-1.5">
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <PiStar
-                        key={i}
-                        size={13}
-                        className={i < Math.round(user.rating!) ? 'text-[#fbbf24] fill-[#fbbf24]' : 'text-[#e5e7eb] fill-[#e5e7eb]'}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-[#534342] text-sm font-medium">{user.rating.toFixed(1)}</span>
-                </div>
-              )}
-
-              <div className="flex items-center gap-1.5">
-                <PiMapPin size={13} className="text-[#94a3b8]" />
-                <span className="text-[#94a3b8] text-sm font-medium">{distanceLabel}</span>
-              </div>
-            </div>
+        {/* Hero — name + location only */}
+        <div className="bg-white rounded-t-3xl px-8 pt-8 pb-6 flex flex-col gap-2">
+          <h2 className="text-[#1d1a20] font-extrabold text-2xl tracking-tight leading-none truncate pr-10">
+            {displayName}
+          </h2>
+          <div className="flex items-center gap-1.5">
+            <PiMapPin size={14} className="text-[#94a3b8]" />
+            <span className="text-[#94a3b8] text-sm font-medium">{distanceLabel}</span>
           </div>
         </div>
 

@@ -99,7 +99,6 @@ export function ProfilePage() {
               <HeroSection
                 userName={displayName}
                 rating={profile?.rating ?? null}
-                photoUrl={firstPhotoUrl}
                 isEditing={isEditing}
                 onNameChange={setDraftName}
                 onEditClick={startEditing}
