@@ -1,11 +1,12 @@
 import { useState, KeyboardEvent } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { apiFetch } from '../../lib/api'
+import { calculateAge, maxBirthdayForMinAge, minBirthday, MIN_AGE } from '../../lib/age'
 import type { UserProfile } from '../../hooks/useProfile'
 
 interface SetupProfileFlowProps {
   /** Pre-filled values when opened from "Edit Profile" */
-  initialValues?: Partial<Pick<UserProfile, 'user_name' | 'bio' | 'sports'>>
+  initialValues?: Partial<Pick<UserProfile, 'user_name' | 'bio' | 'birthday' | 'sports'>>
   onComplete: (profile: UserProfile) => void
   onDismiss?: () => void
   /** "setup" shows the branded onboarding framing; "edit" shows a simpler title */
@@ -18,7 +19,7 @@ const SPORT_SUGGESTIONS = [
   'Skiing', 'Surfing', 'Boxing', 'CrossFit',
 ]
 
-const STEPS = ['Name', 'Bio', 'Sports'] as const
+const STEPS = ['Name', 'Birthday', 'Bio', 'Sports'] as const
 
 /**
  * Multi-step profile setup / edit wizard rendered as a full-screen overlay.
@@ -33,11 +34,18 @@ export function SetupProfileFlow({
   const { session } = useAuth()
   const [step, setStep] = useState(0)
   const [userName, setUserName] = useState(initialValues?.user_name ?? '')
+  const [birthday, setBirthday] = useState<string>(initialValues?.birthday ?? '')
   const [bio, setBio] = useState(initialValues?.bio ?? '')
   const [sports, setSports] = useState<string[]>(initialValues?.sports ?? [])
   const [sportInput, setSportInput] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const birthdayAge = calculateAge(birthday)
+  const birthdayMax = maxBirthdayForMinAge(MIN_AGE)
+  const birthdayMin = minBirthday()
+  const birthdayValid =
+    !!birthday && birthdayAge !== null && birthdayAge >= MIN_AGE && birthdayAge < 120
 
   function addSport(value: string) {
     const trimmed = value.trim()
@@ -62,8 +70,9 @@ export function SetupProfileFlow({
 
   function canAdvance() {
     if (step === 0) return userName.trim().length > 0
-    if (step === 1) return true // bio is optional
-    if (step === 2) return true // sports optional
+    if (step === 1) return birthdayValid
+    if (step === 2) return true // bio is optional
+    if (step === 3) return true // sports optional
     return true
   }
 
@@ -76,6 +85,7 @@ export function SetupProfileFlow({
         method: 'PUT',
         body: JSON.stringify({
           user_name: userName.trim() || null,
+          birthday: birthday || null,
           bio: bio.trim() || null,
           sports,
         }),
@@ -124,12 +134,13 @@ export function SetupProfileFlow({
 
           <h2 className="text-white font-extrabold text-[22px] leading-snug">
             {mode === 'setup'
-              ? ['Set up your profile', 'Tell your story', 'Your sports'][step]
-              : ['Edit your name', 'Edit your bio', 'Edit your sports'][step]}
+              ? ['Set up your profile', 'When were you born?', 'Tell your story', 'Your sports'][step]
+              : ['Edit your name', 'Edit your birthday', 'Edit your bio', 'Edit your sports'][step]}
           </h2>
           <p className="text-white/75 text-sm mt-1">
             {[
               "What should people call you?",
+              `We use your birthday to show your age. You must be at least ${MIN_AGE}.`,
               "Share a little about yourself — it's optional.",
               "What sports are you into? Add as many as you like.",
             ][step]}
@@ -170,6 +181,32 @@ export function SetupProfileFlow({
           {step === 1 && (
             <div className="flex flex-col gap-2">
               <label className="text-[#534342] font-semibold text-sm uppercase tracking-wide">
+                Birthday
+              </label>
+              <input
+                autoFocus
+                type="date"
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && canAdvance() && handleNext()}
+                min={birthdayMin}
+                max={birthdayMax}
+                className="w-full border border-[#fecaca] rounded-2xl px-4 py-3 text-[#1d1a20] text-base outline-none focus:ring-2 focus:ring-[#dc2626]/30"
+              />
+              {birthday && birthdayAge !== null && birthdayAge < MIN_AGE && (
+                <span className="text-[#dc2626] text-xs font-medium">
+                  You must be at least {MIN_AGE} years old to use Pulse.
+                </span>
+              )}
+              {birthdayValid && (
+                <span className="text-[#94a3b8] text-xs">You'll appear as {birthdayAge} on your profile.</span>
+              )}
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[#534342] font-semibold text-sm uppercase tracking-wide">
                 Bio <span className="text-[#94a3b8] normal-case font-normal">(optional)</span>
               </label>
               <textarea
@@ -184,7 +221,7 @@ export function SetupProfileFlow({
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="flex flex-col gap-4">
               {/* Tag pills */}
               {sports.length > 0 && (

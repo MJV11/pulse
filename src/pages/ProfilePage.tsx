@@ -22,6 +22,7 @@ export function ProfilePage() {
 
   const [draftName, setDraftName] = useState('')
   const [draftBio, setDraftBio] = useState('')
+  const [draftBirthday, setDraftBirthday] = useState<string>('')
   const [draftSports, setDraftSports] = useState<string[]>([])
 
   const firstPhotoUrl = photos.length > 0 ? getGalleryPublicUrl(photos[0].storage_path) : null
@@ -30,6 +31,7 @@ export function ProfilePage() {
   function startEditing() {
     setDraftName(profile?.user_name ?? '')
     setDraftBio(profile?.bio ?? '')
+    setDraftBirthday(profile?.birthday ?? '')
     setDraftSports(profile?.sports ?? [])
     setError(null)
     setIsEditing(true)
@@ -50,6 +52,7 @@ export function ProfilePage() {
         body: JSON.stringify({
           user_name: draftName.trim() || null,
           bio: draftBio.trim() || null,
+          birthday: draftBirthday || null,
           sports: draftSports,
         }),
       })
@@ -64,6 +67,7 @@ export function ProfilePage() {
 
   const displayName = isEditing ? draftName : (profile?.user_name ?? null)
   const displayBio = isEditing ? draftBio : (profile?.bio ?? null)
+  const displayBirthday = isEditing ? draftBirthday : (profile?.birthday ?? null)
   const displaySports = isEditing ? draftSports : (profile?.sports ?? [])
 
   return (
@@ -99,8 +103,10 @@ export function ProfilePage() {
               <HeroSection
                 userName={displayName}
                 rating={profile?.rating ?? null}
+                birthday={displayBirthday}
                 isEditing={isEditing}
                 onNameChange={setDraftName}
+                onBirthdayChange={setDraftBirthday}
                 onEditClick={startEditing}
                 onSave={saveProfile}
                 onCancel={cancelEditing}

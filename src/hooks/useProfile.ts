@@ -6,6 +6,8 @@ export interface UserProfile {
   user_id: string
   user_name: string | null
   bio: string | null
+  /** ISO date in YYYY-MM-DD format, or null if not provided. */
+  birthday: string | null
   sports: string[]
   rating: number | null
   created_at: string

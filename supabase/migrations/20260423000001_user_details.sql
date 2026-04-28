@@ -3,12 +3,28 @@ create table if not exists public.user_details (
   user_id    uuid primary key references auth.users (id) on delete cascade,
   user_name  text,
   bio        text,
+  birthday   date,
   sports     text[]                    not null default '{}',
   rating     numeric(4, 2),
   created_at timestamptz               not null default now(),
   updated_at timestamptz               not null default now()
 );
 
+-- For databases that already had this table before `birthday` was added,
+-- bring them in line with the new shape.
+alter table public.user_details
+  add column if not exists birthday date;
+
+-- Sanity check: birthday can't be in the future and the user has to be a
+-- plausible human age (under 120). Drop-and-recreate so re-running this
+-- migration is idempotent.
+alter table public.user_details
+  drop constraint if exists user_details_birthday_check;
+alter table public.user_details
+  add constraint user_details_birthday_check
+  check (birthday is null or (birthday <= current_date and birthday >= current_date - interval '120 years'));
+
+drop trigger if exists set_user_details_updated_at on public.user_details;
 create trigger set_user_details_updated_at
   before update on public.user_details
   for each row execute function public.set_updated_at();
@@ -16,18 +32,21 @@ create trigger set_user_details_updated_at
 alter table public.user_details enable row level security;
 
 -- Anyone authenticated can read any profile
+drop policy if exists "Authenticated users can read user_details" on public.user_details;
 create policy "Authenticated users can read user_details"
   on public.user_details for select
   to authenticated
   using (true);
 
 -- Users can insert their own row
+drop policy if exists "Users can insert own user_details" on public.user_details;
 create policy "Users can insert own user_details"
   on public.user_details for insert
   to authenticated
   with check (user_id = auth.uid());
 
 -- Users can update their own row
+drop policy if exists "Users can update own user_details" on public.user_details;
 create policy "Users can update own user_details"
   on public.user_details for update
   to authenticated

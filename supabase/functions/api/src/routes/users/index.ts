@@ -44,14 +44,15 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
 /**
  * PUT /api/users/me
  * Upserts the authenticated user's profile.
- * Accepted body fields: user_name, bio, sports, avatar_url
+ * Accepted body fields: user_name, bio, birthday (YYYY-MM-DD), sports
  */
 router.put('/me', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
 
-  const { user_name, bio, sports } = req.body as {
+  const { user_name, bio, birthday, sports } = req.body as {
     user_name?: string;
     bio?: string;
+    birthday?: string | null;
     sports?: string[];
   };
 
@@ -65,9 +66,35 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
     return;
   }
 
+  // birthday must be either null (clear) or a YYYY-MM-DD string within range
+  if (birthday !== undefined && birthday !== null) {
+    if (typeof birthday !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
+      res.status(400).json({ error: { message: '`birthday` must be a YYYY-MM-DD date' } });
+      return;
+    }
+    const parsed = new Date(`${birthday}T00:00:00Z`);
+    if (Number.isNaN(parsed.getTime())) {
+      res.status(400).json({ error: { message: '`birthday` is not a valid date' } });
+      return;
+    }
+    const now = new Date();
+    if (parsed.getTime() > now.getTime()) {
+      res.status(400).json({ error: { message: '`birthday` cannot be in the future' } });
+      return;
+    }
+    // Minimum age 13 — keep loose at the API; product can enforce stricter on the client
+    const minAdult = new Date(now);
+    minAdult.setUTCFullYear(now.getUTCFullYear() - 13);
+    if (parsed.getTime() > minAdult.getTime()) {
+      res.status(400).json({ error: { message: 'You must be at least 13 years old' } });
+      return;
+    }
+  }
+
   const patch: Record<string, unknown> = { user_id: userId };
   if (user_name !== undefined) patch.user_name = user_name;
   if (bio !== undefined) patch.bio = bio;
+  if (birthday !== undefined) patch.birthday = birthday;
   if (sports !== undefined) patch.sports = sports;
 
   try {

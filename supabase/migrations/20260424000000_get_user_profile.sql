@@ -5,6 +5,7 @@ returns table (
   user_id          uuid,
   user_name        text,
   bio              text,
+  birthday         date,
   sports           text[],
   rating           numeric,
   first_photo_path text,
@@ -21,6 +22,7 @@ as $$
     ud.user_id,
     ud.user_name,
     ud.bio,
+    ud.birthday,
     ud.sports,
     ud.rating,
     (
