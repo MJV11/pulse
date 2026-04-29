@@ -82,7 +82,7 @@ as $$
   left join searcher s on true
   where
     ud.location is not null
-    and (exclude_user_id is null or ud.user_id <> exclude_user_id)
+    --and (exclude_user_id is null or ud.user_id <> exclude_user_id)
     and ST_DWithin(
       ud.location,
       ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
