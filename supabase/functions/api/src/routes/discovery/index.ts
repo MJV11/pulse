@@ -50,8 +50,22 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       distance_miles: r.distance_miles,
     }));
 
-    // discovery_feed returns an empty array when the user has no stored location
-    res.json({ data: flat, ...(!flat.length && { reason: 'no_location' }) });
+    if (flat.length > 0) {
+      res.json({ data: flat });
+      return;
+    }
+
+    // Empty result — could be no location set, or location exists but no
+    // nearby users pass the gender-preference filter. Distinguish the two so
+    // the frontend can show the right message.
+    const { data: locRow } = await supabase
+      .from('user_details')
+      .select('location')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const hasLocation = (locRow as { location: unknown } | null)?.location != null;
+    res.json({ data: [], ...(!hasLocation && { reason: 'no_location' }) });
   } catch (err) {
     console.error('Unexpected error in GET /discovery:', err);
     res.status(500).json({ error: { message: 'Internal server error' } });
