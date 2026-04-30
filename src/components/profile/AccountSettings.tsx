@@ -79,6 +79,12 @@ interface AccountSettingsProps {
   minAgePref: number
   /** Maximum age preference (defaults to 99 if not yet stored). */
   maxAgePref: number
+  /** Minimum FTP preference in watts (defaults to 50 if not yet stored). */
+  minFtpPref: number
+  /** Maximum FTP preference in watts (defaults to 500 if not yet stored). */
+  maxFtpPref: number
+  /** When true, hides users without a known Strava FTP from discovery. */
+  requireFtp: boolean
   /** When true, renders skeleton placeholders in place of the real content. */
   isLoading?: boolean
   /**
@@ -89,15 +95,25 @@ interface AccountSettingsProps {
   onLookingForChange: (next: LookingFor) => Promise<void> | void
   /** Persist updated age range preferences. Called on slider release. */
   onAgePrefsChange: (min: number, max: number) => Promise<void> | void
+  /**
+   * Persist updated FTP range + require-FTP toggle. Called on slider
+   * release and on toggle flip. The toggle and slider are committed
+   * together because the require flag often pairs with an explicit range.
+   */
+  onFtpPrefsChange: (min: number, max: number, requireFtp: boolean) => Promise<void> | void
 }
 
 export function AccountSettings({
   lookingFor,
   minAgePref,
   maxAgePref,
+  minFtpPref,
+  maxFtpPref,
+  requireFtp,
   isLoading = false,
   onLookingForChange,
   onAgePrefsChange,
+  onFtpPrefsChange,
 }: AccountSettingsProps) {
   const { signOut } = useAuth()
   const [signingOut, setSigningOut] = useState(false)
@@ -144,16 +160,21 @@ export function AccountSettings({
         <>
           {/* Settings rows */}
           <div className="flex flex-col gap-6">
-            {/* Dating Preferences — expandable submenu for the looking-for selector and age range */}
+            {/* Dating Preferences — expandable submenu for the looking-for selector,
+                age range, and Strava FTP range */}
             <PreferencesRow
               lookingFor={lookingFor}
               minAgePref={minAgePref}
               maxAgePref={maxAgePref}
+              minFtpPref={minFtpPref}
+              maxFtpPref={maxFtpPref}
+              requireFtp={requireFtp}
               open={preferencesOpen}
               saving={savingPref}
               onToggleOpen={() => setPreferencesOpen((o) => !o)}
               onSelect={handleSelectLookingFor}
               onAgePrefsChange={onAgePrefsChange}
+              onFtpPrefsChange={onFtpPrefsChange}
             />
 
             {Array.from(SETTINGS_ROWS.values()).map((row) => (
@@ -244,33 +265,54 @@ interface PreferencesRowProps {
   lookingFor: LookingFor | null
   minAgePref: number
   maxAgePref: number
+  minFtpPref: number
+  maxFtpPref: number
+  requireFtp: boolean
   open: boolean
   saving: boolean
   onToggleOpen: () => void
   onSelect: (next: LookingFor) => void
   onAgePrefsChange: (min: number, max: number) => Promise<void> | void
+  onFtpPrefsChange: (min: number, max: number, requireFtp: boolean) => Promise<void> | void
 }
 
 function PreferencesRow({
   lookingFor,
   minAgePref,
   maxAgePref,
+  minFtpPref,
+  maxFtpPref,
+  requireFtp,
   open,
   saving,
   onToggleOpen,
   onSelect,
   onAgePrefsChange,
+  onFtpPrefsChange,
 }: PreferencesRowProps) {
   // Local draft age range — updated live while dragging; committed on release
   const [localMin, setLocalMin] = useState(minAgePref)
   const [localMax, setLocalMax] = useState(maxAgePref)
   const [savingAge, setSavingAge] = useState(false)
 
+  // Local draft FTP range + require flag — same pattern as age range
+  const [localFtpMin, setLocalFtpMin] = useState(minFtpPref)
+  const [localFtpMax, setLocalFtpMax] = useState(maxFtpPref)
+  const [localRequireFtp, setLocalRequireFtp] = useState(requireFtp)
+  const [savingFtp, setSavingFtp] = useState(false)
+
   // Keep local state in sync when props change (e.g. after save round-trip)
   const prevMin = useRef(minAgePref)
   const prevMax = useRef(maxAgePref)
   if (prevMin.current !== minAgePref) { prevMin.current = minAgePref; setLocalMin(minAgePref) }
   if (prevMax.current !== maxAgePref) { prevMax.current = maxAgePref; setLocalMax(maxAgePref) }
+
+  const prevFtpMin = useRef(minFtpPref)
+  const prevFtpMax = useRef(maxFtpPref)
+  const prevRequireFtp = useRef(requireFtp)
+  if (prevFtpMin.current !== minFtpPref) { prevFtpMin.current = minFtpPref; setLocalFtpMin(minFtpPref) }
+  if (prevFtpMax.current !== maxFtpPref) { prevFtpMax.current = maxFtpPref; setLocalFtpMax(maxFtpPref) }
+  if (prevRequireFtp.current !== requireFtp) { prevRequireFtp.current = requireFtp; setLocalRequireFtp(requireFtp) }
 
   async function handleAgeCommit(min: number, max: number) {
     setLocalMin(min)
@@ -281,6 +323,24 @@ function PreferencesRow({
     } finally {
       setSavingAge(false)
     }
+  }
+
+  async function handleFtpCommit(min: number, max: number, require: boolean) {
+    setLocalFtpMin(min)
+    setLocalFtpMax(max)
+    setLocalRequireFtp(require)
+    setSavingFtp(true)
+    try {
+      await onFtpPrefsChange(min, max, require)
+    } finally {
+      setSavingFtp(false)
+    }
+  }
+
+  function handleToggleRequireFtp() {
+    const next = !localRequireFtp
+    setLocalRequireFtp(next)
+    handleFtpCommit(localFtpMin, localFtpMax, next)
   }
 
   const description = lookingFor
@@ -361,6 +421,45 @@ function PreferencesRow({
               <span className="text-[#94a3b8] text-xs italic">Saving…</span>
             )}
           </div>
+
+          {/* FTP range — Strava cycling functional threshold power filter */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[#534342] font-semibold text-xs uppercase tracking-[1.2px]">
+                FTP range
+              </span>
+              <span className="text-[#DB2777] font-semibold text-sm tabular-nums">
+                {localFtpMin}–{localFtpMax === FTP_MAX ? `${FTP_MAX}+` : localFtpMax}W
+              </span>
+            </div>
+            <FtpRangeSlider
+              minFtp={localFtpMin}
+              maxFtp={localFtpMax}
+              onChange={(min, max) => { setLocalFtpMin(min); setLocalFtpMax(max) }}
+              onCommit={(min, max) => handleFtpCommit(min, max, localRequireFtp)}
+            />
+            {/* Require-FTP toggle — sits under the slider */}
+            <button
+              type="button"
+              onClick={handleToggleRequireFtp}
+              className="flex items-center justify-between rounded-xl hover:bg-[#fef2f2]/30 transition-colors"
+              aria-pressed={localRequireFtp}
+            >
+              <span className="text-[#534342] font-medium text-xs text-left">
+                Only show users with FTP
+              </span>
+              <span
+                className={`w-10 h-5 rounded-full flex items-center transition-colors shrink-0 ${
+                  localRequireFtp ? 'bg-[#db2777] justify-end pr-0.5' : 'bg-gray-300 justify-start pl-0.5'
+                }`}
+              >
+                <span className="w-4 h-4 bg-white rounded-full shadow" />
+              </span>
+            </button>
+            {savingFtp && (
+              <span className="text-[#94a3b8] text-xs italic">Saving…</span>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -371,6 +470,13 @@ function PreferencesRow({
 
 const AGE_MIN = 18
 const AGE_MAX = 99
+// FTP slider bounds (watts). Must stay in sync with the user_details
+// `user_details_ftp_pref_check` constraint server-side.
+const FTP_MIN = 50
+const FTP_MAX = 500
+// Snap FTP slider movements to 5W increments — finer than that doesn't
+// match how athletes self-report and makes the thumb feel jittery.
+const FTP_STEP = 5
 
 interface AgeRangeSliderProps {
   minAge: number
@@ -452,6 +558,87 @@ function AgeRangeSlider({ minAge, maxAge, onChange, onCommit }: AgeRangeSliderPr
       <div className="flex justify-between mt-2 px-2.5 text-[10px] text-[#94a3b8] font-medium select-none">
         <span>{AGE_MIN}</span>
         <span>99+</span>
+      </div>
+    </div>
+  )
+}
+
+interface FtpRangeSliderProps {
+  minFtp: number
+  maxFtp: number
+  /** Called on every drag move so labels update live. */
+  onChange: (min: number, max: number) => void
+  /** Called once on pointer release — this is when you should persist. */
+  onCommit: (min: number, max: number) => void
+}
+
+function FtpRangeSlider({ minFtp, maxFtp, onChange, onCommit }: FtpRangeSliderProps) {
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  const toPct = (v: number) => ((v - FTP_MIN) / (FTP_MAX - FTP_MIN)) * 100
+  const minPct = toPct(minFtp)
+  const maxPct = toPct(maxFtp)
+
+  function valueFromX(clientX: number): number {
+    const el = trackRef.current
+    if (!el) return FTP_MIN
+    const { left, width } = el.getBoundingClientRect()
+    const pct = Math.max(0, Math.min(1, (clientX - left) / width))
+    const raw = FTP_MIN + pct * (FTP_MAX - FTP_MIN)
+    return Math.round(raw / FTP_STEP) * FTP_STEP
+  }
+
+  function thumbHandlers(thumb: 'min' | 'max') {
+    return {
+      onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+        e.currentTarget.setPointerCapture(e.pointerId)
+      },
+      onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+        if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
+        const val = valueFromX(e.clientX)
+        if (thumb === 'min') onChange(Math.min(val, maxFtp - FTP_STEP), maxFtp)
+        else onChange(minFtp, Math.max(val, minFtp + FTP_STEP))
+      },
+      onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+        if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
+        const val = valueFromX(e.clientX)
+        if (thumb === 'min') onCommit(Math.min(val, maxFtp - FTP_STEP), maxFtp)
+        else onCommit(minFtp, Math.max(val, minFtp + FTP_STEP))
+      },
+    }
+  }
+
+  return (
+    <div className="py-2">
+      <div ref={trackRef} className="relative h-1.5 bg-[#e2e8f0] rounded-full mx-2.5">
+        <div
+          className="absolute h-full bg-[#db2777] rounded-full pointer-events-none"
+          style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }}
+        />
+        <div
+          {...thumbHandlers('min')}
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 bg-white border-2 border-[#db2777] rounded-full shadow cursor-grab active:cursor-grabbing touch-none select-none z-10"
+          style={{ left: `${minPct}%` }}
+          role="slider"
+          aria-label="Minimum FTP (watts)"
+          aria-valuenow={minFtp}
+          aria-valuemin={FTP_MIN}
+          aria-valuemax={maxFtp - FTP_STEP}
+        />
+        <div
+          {...thumbHandlers('max')}
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 bg-white border-2 border-[#db2777] rounded-full shadow cursor-grab active:cursor-grabbing touch-none select-none z-10"
+          style={{ left: `${maxPct}%` }}
+          role="slider"
+          aria-label="Maximum FTP (watts)"
+          aria-valuenow={maxFtp}
+          aria-valuemin={minFtp + FTP_STEP}
+          aria-valuemax={FTP_MAX}
+        />
+      </div>
+      <div className="flex justify-between mt-2 px-2.5 text-[10px] text-[#94a3b8] font-medium select-none">
+        <span>{FTP_MIN}W</span>
+        <span>{FTP_MAX}W+</span>
       </div>
     </div>
   )

@@ -4,6 +4,7 @@ import { AboutMeCard } from '../components/profile/AboutMeCard'
 import { InterestsCard } from '../components/profile/InterestsCard'
 import { MediaGallery } from '../components/profile/MediaGallery'
 import { AccountSettings } from '../components/profile/AccountSettings'
+import { StravaActivityPanel } from '../components/profile/StravaActivityPanel'
 import { useProfile } from '../context/ProfileContext'
 import { useAuth } from '../context/AuthContext'
 import { useProfilePhotos } from '../hooks/useProfilePhotos'
@@ -99,6 +100,28 @@ export function ProfilePage() {
     }
   }
 
+  /**
+   * Persists updated FTP range preferences. Called on slider release.
+   * `requireFtp` is the toggle that hides users without a known FTP.
+   */
+  async function saveFtpPrefs(min: number, max: number, requireFtp: boolean) {
+    if (!session?.access_token) return
+    setError(null)
+    try {
+      await apiFetch<{ data: UserProfile }>('/users/me', session.access_token, {
+        method: 'PUT',
+        body: JSON.stringify({
+          min_ftp_pref: min,
+          max_ftp_pref: max,
+          require_ftp: requireFtp,
+        }),
+      })
+      await refresh()
+    } catch (err) {
+      setError((err as Error).message ?? 'Something went wrong')
+    }
+  }
+
   const displayName = isEditing ? draftName : (profile?.user_name ?? null)
   const displayBio = isEditing ? draftBio : (profile?.bio ?? null)
   const displayBirthday = isEditing ? draftBirthday : (profile?.birthday ?? null)
@@ -156,11 +179,26 @@ export function ProfilePage() {
             lookingFor={profile?.looking_for ?? null}
             minAgePref={profile?.min_age_pref ?? 18}
             maxAgePref={profile?.max_age_pref ?? 99}
+            minFtpPref={profile?.min_ftp_pref ?? 50}
+            maxFtpPref={profile?.max_ftp_pref ?? 500}
+            requireFtp={profile?.require_ftp ?? false}
             isLoading={loading}
             onLookingForChange={saveLookingFor}
             onAgePrefsChange={saveAgePrefs}
+            onFtpPrefsChange={saveFtpPrefs}
           />
         </div>
+
+        {/* Strava panel — shown whenever the user has linked Strava (i.e. we
+            have a sync timestamp). For unconnected users we render nothing
+            and let the AccountSettings → Integrations row prompt them to
+            connect. */}
+        {profile?.strava_synced_at && (
+          <StravaActivityPanel
+            ftp={profile.strava_ftp ?? null}
+            stats={profile.strava_stats ?? []}
+          />
+        )}
       </div>
     </main>
   )

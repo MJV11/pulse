@@ -50,6 +50,45 @@ create trigger premium_users_updated_at
 -- The profile RPC LEFT JOINs premium_users so the frontend gets premium status
 -- in the same round-trip as the rest of the profile. Clients derive `isPremium`
 -- from `premium_expires_at > now()`.
+--
+-- Also LEFT JOINs strava_connections (for the athlete's FTP + last sync time)
+-- and aggregates strava_activity_stats into a jsonb array so the client gets
+-- a per-sport-type stats breakdown without an extra round-trip.
+
+-- Defensive shim: if a database has the older Strava schema (pre `ftp` /
+-- `last_synced_at` on `strava_connections`, or no `strava_activity_stats`
+-- table at all) and this file is re-run on its own, the function below
+-- would fail with "column sc.ftp does not exist" / "relation
+-- public.strava_activity_stats does not exist". The same DDL lives in
+-- 20260427000001_strava_connections.sql; duplicating it here keeps this
+-- migration self-contained.
+alter table public.strava_connections
+  add column if not exists ftp            integer,
+  add column if not exists last_synced_at timestamptz;
+
+create table if not exists public.strava_activity_stats (
+  user_id             uuid          not null references auth.users (id) on delete cascade,
+  sport_type          text          not null,
+  activity_count_14d  integer       not null default 0,
+  total_seconds_14d   bigint        not null default 0,
+  latest_activity_at  timestamptz,
+  updated_at          timestamptz   not null default now(),
+  primary key (user_id, sport_type)
+);
+
+create index if not exists strava_activity_stats_user_id_idx
+  on public.strava_activity_stats (user_id);
+
+alter table public.strava_activity_stats enable row level security;
+
+drop policy if exists "Authenticated users can read strava_activity_stats"
+  on public.strava_activity_stats;
+create policy "Authenticated users can read strava_activity_stats"
+  on public.strava_activity_stats
+  for select
+  to authenticated
+  using (true);
+
 drop function if exists public.get_user_profile;
 create or replace function public.get_user_profile(p_user_id uuid)
 returns table (
@@ -63,10 +102,16 @@ returns table (
   looking_for        text,
   min_age_pref       integer,
   max_age_pref       integer,
+  min_ftp_pref       integer,
+  max_ftp_pref       integer,
+  require_ftp        boolean,
   first_photo_path   text,
   latitude           float8,
   longitude          float8,
   premium_expires_at timestamptz,
+  strava_ftp         integer,
+  strava_synced_at   timestamptz,
+  strava_stats       jsonb,
   created_at         timestamptz,
   updated_at         timestamptz
 )
@@ -85,6 +130,9 @@ as $$
     ud.looking_for,
     ud.min_age_pref,
     ud.max_age_pref,
+    ud.min_ftp_pref,
+    ud.max_ftp_pref,
+    ud.require_ftp,
     (
       select pp.storage_path
       from public.profile_photos pp
@@ -95,9 +143,28 @@ as $$
     ST_Y(ud.location::geometry) as latitude,
     ST_X(ud.location::geometry) as longitude,
     pu.expires_at as premium_expires_at,
+    sc.ftp as strava_ftp,
+    sc.last_synced_at as strava_synced_at,
+    coalesce(
+      (
+        select jsonb_agg(
+          jsonb_build_object(
+            'sport_type',         s.sport_type,
+            'activity_count_14d', s.activity_count_14d,
+            'total_seconds_14d',  s.total_seconds_14d,
+            'latest_activity_at', s.latest_activity_at
+          )
+          order by s.activity_count_14d desc, s.sport_type asc
+        )
+        from public.strava_activity_stats s
+        where s.user_id = ud.user_id
+      ),
+      '[]'::jsonb
+    ) as strava_stats,
     ud.created_at,
     ud.updated_at
   from public.user_details ud
   left join public.premium_users pu on pu.user_id = ud.user_id
+  left join public.strava_connections sc on sc.user_id = ud.user_id
   where ud.user_id = p_user_id;
 $$;

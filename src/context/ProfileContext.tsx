@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from './AuthContext'
 import { apiFetch } from '../lib/api'
 import { SetupProfileFlow } from '../components/profile/SetupProfileFlow'
@@ -41,6 +41,31 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchProfile()
   }, [fetchProfile])
+
+  // Once per signed-in user, ask the backend to refresh Strava stats. The
+  // backend throttles to once per hour, so re-running this on a quick
+  // reload is a cheap no-op. Fire-and-forget — we never want this to block
+  // the UI; stale stats are fine until the next sync lands and the next
+  // /users/me call returns the updated row.
+  const lastSyncedUserRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!session?.access_token) return
+    const userId = session.user.id
+    if (lastSyncedUserRef.current === userId) return
+    lastSyncedUserRef.current = userId
+
+    apiFetch<{ data: { refreshed: boolean } }>(
+      '/strava/sync',
+      session.access_token,
+      { method: 'POST' },
+    )
+      .then(({ data }) => {
+        if (data?.refreshed) fetchProfile()
+      })
+      .catch((err) => {
+        console.warn('Background Strava sync failed:', err)
+      })
+  }, [session?.access_token, session?.user.id, fetchProfile])
 
   const needsSetup =
     !profileLoading &&

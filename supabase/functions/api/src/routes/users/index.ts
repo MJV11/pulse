@@ -47,15 +47,31 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
  * Accepted body fields: user_name, bio, birthday (YYYY-MM-DD), sports,
  * gender ('man' | 'woman' | 'nonbinary'),
  * looking_for ('man' | 'woman' | 'nonbinary' | 'all'),
- * min_age_pref (integer 18–99), max_age_pref (integer 18–99, >= min_age_pref).
+ * min_age_pref (integer 18–99), max_age_pref (integer 18–99, >= min_age_pref),
+ * min_ftp_pref (integer 50–500), max_ftp_pref (integer 50–500, >= min_ftp_pref),
+ * require_ftp (boolean — when true, discovery hides users without a known FTP).
  */
 const ALLOWED_GENDERS = new Set(['man', 'woman', 'nonbinary']);
 const ALLOWED_LOOKING_FOR = new Set(['man', 'woman', 'nonbinary', 'all']);
+const FTP_MIN = 50;
+const FTP_MAX = 500;
 
 router.put('/me', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
 
-  const { user_name, bio, birthday, sports, gender, looking_for, min_age_pref, max_age_pref } = req.body as {
+  const {
+    user_name,
+    bio,
+    birthday,
+    sports,
+    gender,
+    looking_for,
+    min_age_pref,
+    max_age_pref,
+    min_ftp_pref,
+    max_ftp_pref,
+    require_ftp,
+  } = req.body as {
     user_name?: string;
     bio?: string;
     birthday?: string | null;
@@ -64,6 +80,9 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
     looking_for?: string | null;
     min_age_pref?: unknown;
     max_age_pref?: unknown;
+    min_ftp_pref?: unknown;
+    max_ftp_pref?: unknown;
+    require_ftp?: unknown;
   };
 
   if (sports !== undefined && !Array.isArray(sports)) {
@@ -114,6 +133,49 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
     return;
   }
 
+  // min_ftp_pref / max_ftp_pref: integers in [50, 500], min ≤ max
+  if (min_ftp_pref !== undefined) {
+    if (
+      typeof min_ftp_pref !== 'number' ||
+      !Number.isInteger(min_ftp_pref) ||
+      min_ftp_pref < FTP_MIN ||
+      min_ftp_pref > FTP_MAX
+    ) {
+      res
+        .status(400)
+        .json({ error: { message: `\`min_ftp_pref\` must be an integer between ${FTP_MIN} and ${FTP_MAX}` } });
+      return;
+    }
+  }
+
+  if (max_ftp_pref !== undefined) {
+    if (
+      typeof max_ftp_pref !== 'number' ||
+      !Number.isInteger(max_ftp_pref) ||
+      max_ftp_pref < FTP_MIN ||
+      max_ftp_pref > FTP_MAX
+    ) {
+      res
+        .status(400)
+        .json({ error: { message: `\`max_ftp_pref\` must be an integer between ${FTP_MIN} and ${FTP_MAX}` } });
+      return;
+    }
+  }
+
+  if (
+    min_ftp_pref !== undefined &&
+    max_ftp_pref !== undefined &&
+    (min_ftp_pref as number) > (max_ftp_pref as number)
+  ) {
+    res.status(400).json({ error: { message: '`min_ftp_pref` must be less than or equal to `max_ftp_pref`' } });
+    return;
+  }
+
+  if (require_ftp !== undefined && typeof require_ftp !== 'boolean') {
+    res.status(400).json({ error: { message: '`require_ftp` must be a boolean' } });
+    return;
+  }
+
   // birthday must be either null (clear) or a YYYY-MM-DD string within range
   if (birthday !== undefined && birthday !== null) {
     if (typeof birthday !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
@@ -148,6 +210,9 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
   if (looking_for !== undefined) patch.looking_for = looking_for;
   if (min_age_pref !== undefined) patch.min_age_pref = min_age_pref;
   if (max_age_pref !== undefined) patch.max_age_pref = max_age_pref;
+  if (min_ftp_pref !== undefined) patch.min_ftp_pref = min_ftp_pref;
+  if (max_ftp_pref !== undefined) patch.max_ftp_pref = max_ftp_pref;
+  if (require_ftp !== undefined) patch.require_ftp = require_ftp;
 
   try {
     const { data, error } = await supabase

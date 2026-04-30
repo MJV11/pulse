@@ -2,6 +2,7 @@
 import express, { Request, Response } from 'npm:express@4.18.2';
 import { requireAuth } from '../../middlewares/auth.ts';
 import { getServiceClient } from '../../utils/supabase.ts';
+import { syncStravaStats } from '../../utils/strava.ts';
 
 interface AuthenticatedRequest extends Request {
   user: { id: string; email?: string; [key: string]: unknown };
@@ -48,7 +49,7 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
     const { data, error } = await supabase
       .from('strava_connections')
       .select(
-        'strava_athlete_id, athlete_username, athlete_firstname, athlete_lastname, athlete_profile_url, scope, connected_at',
+        'strava_athlete_id, athlete_username, athlete_firstname, athlete_lastname, athlete_profile_url, scope, connected_at, ftp, last_synced_at',
       )
       .eq('user_id', userId)
       .maybeSingle();
@@ -60,7 +61,16 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
     }
 
     if (!data) {
-      res.json({ data: { connected: false, athlete: null, connected_at: null, scope: null } });
+      res.json({
+        data: {
+          connected: false,
+          athlete: null,
+          connected_at: null,
+          scope: null,
+          ftp: null,
+          last_synced_at: null,
+        },
+      });
       return;
     }
 
@@ -69,6 +79,8 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
         connected: true,
         connected_at: data.connected_at,
         scope: data.scope,
+        ftp: data.ftp,
+        last_synced_at: data.last_synced_at,
         athlete: {
           id: data.strava_athlete_id,
           username: data.athlete_username,
@@ -162,6 +174,13 @@ router.post('/connect', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
+    // Kick off the first stats sync in the background so the row gets
+    // populated immediately after linking. We don't await it — connect
+    // shouldn't block on a slow Strava API call.
+    syncStravaStats(userId, { force: true }).catch((err) =>
+      console.error('Initial Strava sync failed:', err),
+    );
+
     res.status(201).json({
       data: {
         connected: true,
@@ -176,6 +195,30 @@ router.post('/connect', requireAuth, async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error('Unexpected error in POST /strava/connect:', err);
+    res.status(500).json({ error: { message: 'Internal server error' } });
+  }
+});
+
+/**
+ * POST /api/strava/sync
+ * Refreshes the authenticated user's 14-day activity stats and FTP. Throttled
+ * to once per hour per user — re-calls within the throttle window are a
+ * no-op and return `{ refreshed: false, reason: 'throttled' }`.
+ *
+ * Pass `?force=1` (or body `{ force: true }`) to bypass the throttle.
+ */
+router.post('/sync', requireAuth, async (req: Request, res: Response) => {
+  const { id: userId } = (req as AuthenticatedRequest).user;
+  const force =
+    req.query.force === '1' ||
+    req.query.force === 'true' ||
+    (req.body as { force?: unknown })?.force === true;
+
+  try {
+    const result = await syncStravaStats(userId, { force });
+    res.json({ data: result });
+  } catch (err) {
+    console.error('Unexpected error in POST /strava/sync:', err);
     res.status(500).json({ error: { message: 'Internal server error' } });
   }
 });

@@ -1,17 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ProfileCard } from '../components/discovery/ProfileCard'
+import { ProfileDetailCard } from '../components/discovery/ProfileDetailCard'
 import { ActionControls } from '../components/discovery/ActionControls'
-import { UserProfileModal } from '../components/discovery/UserProfileModal'
 import { MatchCelebration } from '../components/discovery/MatchCelebration'
 import { useDiscovery } from '../hooks/useDiscovery'
 import type { NearbyUser } from '../hooks/useDiscovery'
-import type { DiscoveryProfile } from '../lib/types'
 import { supabase } from '../lib/supabase'
 import { apiFetch } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { useProfile } from '../context/ProfileContext'
-import { calculateAge } from '../lib/age'
 import { gradientFor } from '../lib'
 
 interface LikeResponse {
@@ -37,27 +34,11 @@ interface MatchCelebrationState {
   photoUrl: string | null
 }
 
-function toProfile(user: NearbyUser): DiscoveryProfile {
+/** Renders a "3.2 miles away" / "Less than a mile away" label for the hero. */
+function distanceLabelFor(user: NearbyUser): string {
   const miles = user.distance_miles
-  const distanceLabel =
-    miles < 1
-      ? 'Less than a mile away'
-      : `${miles.toFixed(1)} ${miles === 1 ? 'mile' : 'miles'} away`
-
-  const photoUrl = user.first_photo_path
-    ? supabase.storage.from('gallery').getPublicUrl(user.first_photo_path).data.publicUrl
-    : undefined
-
-  return {
-    id: user.user_id,
-    name: user.user_name ?? 'Unknown',
-    age: calculateAge(user.birthday) ?? undefined,
-    photo: photoUrl,
-    bio: user.bio,
-    distance: distanceLabel,
-    verified: false,
-    interests: user.sports ?? [],
-  }
+  if (miles < 1) return 'Less than a mile away'
+  return `${miles.toFixed(1)} ${miles === 1 ? 'mile' : 'miles'} away`
 }
 
 /** How long the swipe-off animation runs. Keep in sync with the CSS transition. */
@@ -67,14 +48,18 @@ type SwipeDirection = 'left' | 'right' | 'up'
 
 /**
  * Discovery (swipe) page — shows real nearby users from the API as swipeable
- * profile cards. Like/Dislike/Rewind navigate through the stack.
+ * profile cards. Each card starts collapsed (just the photo hero); clicking
+ * the card or pressing ↑ expands it into a scrollable container with the
+ * extended details (about / sports / Strava / photos). Pressing ↓ collapses
+ * it back. Like / Dislike / Rewind navigate through the stack.
+ *
  * On a mutual like the `process_like` RPC returns `matched: true` and we
  * show a celebration overlay before advancing.
  *
  * Keyboard shortcuts:
  *   ← / →   Nope / Like
- *   ↑        Open profile
- *   ↓        Close profile
+ *   ↑        Open Profile
+ *   ↓        Close Profile
  *   Space    Next photo
  */
 export function DiscoveryPage() {
@@ -84,7 +69,6 @@ export function DiscoveryPage() {
   const { users, loading, noLocation, error } = useDiscovery(50)
   const [index, setIndex] = useState(0)
   const [radiusMiles] = useState(50)
-  const [modalUser, setModalUser] = useState<NearbyUser | null>(null)
   const [celebration, setCelebration] = useState<MatchCelebrationState | null>(null)
   const [liking, setLiking] = useState(false)
   /** Direction the active card is flying off in, or `null` when at rest. */
@@ -98,13 +82,16 @@ export function DiscoveryPage() {
   /** Which photo in currentPhotos is being displayed. */
   const [photoIdx, setPhotoIdx] = useState(0)
 
+  /** Whether the current card has been expanded to show extended details. */
+  const [expanded, setExpanded] = useState(false)
+
   const currentUser = users[index]
-  const profile = currentUser ? toProfile(currentUser) : null
 
   // Fetch all photos for the current user whenever the card changes
   useEffect(() => {
     setPhotoIdx(0)
     setCurrentPhotos([])
+    setExpanded(false)
     if (!currentUser || !session?.access_token) return
 
     let cancelled = false
@@ -196,14 +183,8 @@ export function DiscoveryPage() {
   // dedicated handler.
   const handleSuperPulse = useCallback(() => sendLike('up'), [sendLike])
 
-  const handleLikeFromModal = useCallback(async () => {
-    setModalUser(null)
-    await sendLike('right')
-  }, [sendLike])
-
   const handleDislike = useCallback(async () => {
     if (exitDirection) return
-    setModalUser(null)
     await swipeAway('left')
     advance()
   }, [exitDirection, advance, swipeAway])
@@ -236,10 +217,10 @@ export function DiscoveryPage() {
           handleLike()
           break
         case 'ArrowUp':
-          if (!modalUser && currentUser) setModalUser(currentUser)
+          setExpanded(true)
           break
         case 'ArrowDown':
-          if (modalUser) setModalUser(null)
+          setExpanded(false)
           break
         case ' ':
           e.preventDefault()
@@ -250,7 +231,7 @@ export function DiscoveryPage() {
 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [handleDislike, handleLike, handleNextPhoto, modalUser, currentUser])
+  }, [handleDislike, handleLike, handleNextPhoto])
 
   function dismissCelebration() {
     setCelebration(null)
@@ -363,7 +344,7 @@ export function DiscoveryPage() {
           )}
 
           {/* Active card */}
-          {!loading && profile && index < users.length && (
+          {!loading && currentUser && index < users.length && (
             <>
               {index + 1 < users.length && (
                 <div
@@ -395,11 +376,13 @@ export function DiscoveryPage() {
                     pointerEvents: exitDirection ? 'none' : undefined,
                   }}
                 >
-                  <ProfileCard
-                    profile={profile}
+                  <ProfileDetailCard
+                    user={currentUser}
+                    distanceLabel={distanceLabelFor(currentUser)}
                     photos={currentPhotos}
                     photoIndex={photoIdx}
-                    onClick={() => setModalUser(currentUser)}
+                    expanded={expanded}
+                    onHeroClick={() => setExpanded((v) => !v)}
                   />
                 </div>
                 <ActionControls
@@ -424,18 +407,6 @@ export function DiscoveryPage() {
         <Divider />
         <KeyHint keys={['Space']} label="Next Photo" />
       </div>
-
-
-      {/* User profile modal */}
-      {modalUser && (
-        <UserProfileModal
-          user={modalUser}
-          distanceLabel={toProfile(modalUser).distance}
-          onClose={() => setModalUser(null)}
-          onLike={handleLikeFromModal}
-          onDislike={handleDislike}
-        />
-      )}
 
       {/* Match celebration overlay */}
       {celebration && (

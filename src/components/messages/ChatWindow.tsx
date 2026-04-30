@@ -9,6 +9,11 @@ interface ChatWindowProps {
   conversation: Conversation
   messages: Message[]
   onSend?: (text: string) => void
+  /**
+   * Forwarded to the chat header so clicking the partner's avatar/name can
+   * open the profile detail modal in the parent page.
+   */
+  onProfileClick?: () => void
 }
 
 /**
@@ -18,10 +23,10 @@ interface ChatWindowProps {
  * the date pills (`Today`, `Yesterday`, weekday, full date) line up with the
  * user's calendar rather than UTC.
  */
-export function ChatWindow({ conversation, messages, onSend }: ChatWindowProps) {
+export function ChatWindow({ conversation, messages, onSend, onProfileClick }: ChatWindowProps) {
   return (
     <div className="flex-1 bg-white relative flex flex-col h-full overflow-hidden">
-      <ChatHeader conversation={conversation} />
+      <ChatHeader conversation={conversation} onProfileClick={onProfileClick} />
 
       <div className="absolute inset-0 top-20 bottom-[124px] overflow-y-auto px-8 py-8 flex flex-col gap-3">
         {messages.length === 0 && (

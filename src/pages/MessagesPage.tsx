@@ -2,13 +2,14 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ConversationList } from '../components/messages/ConversationList'
 import { ChatWindow } from '../components/messages/ChatWindow'
+import { UserProfileModal } from '../components/discovery/UserProfileModal'
 import { useConversations } from '../hooks/useConversations'
 import { useMatches } from '../hooks/useMatches'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { formatTime } from '../lib/time'
-import type { Conversation, Message } from '../lib/types'
+import type { Conversation, Message, ProfileDetailUser } from '../lib/types'
 
 interface DbMessage {
   id: string
@@ -53,13 +54,26 @@ export function MessagesPage() {
   const requestedPartnerId =
     (location.state as MessagesLocationState | null)?.partnerId ?? null
 
-  const { conversations, loading: convsLoading, refresh: refreshConversations } = useConversations()
-  const { matches } = useMatches()
+  const {
+    conversations,
+    partners,
+    loading: convsLoading,
+    refresh: refreshConversations,
+    removePartner,
+  } = useConversations()
+  const { matches, unmatch } = useMatches()
   // Initialize from router state so the chat opens immediately on navigation
   // from MatchesPage, even before conversations finish loading.
   const [activeId, setActiveId] = useState<string | null>(requestedPartnerId)
   const [threads, setThreads] = useState<Map<string, Message[]>>(new Map())
   const [threadLoading, setThreadLoading] = useState(false)
+  // Profile detail modal — opens when the user taps any face in this page.
+  // We render a "Message" CTA when the modal is opened from somewhere other
+  // than the active chat header.
+  const [openProfile, setOpenProfile] = useState<{
+    user: ProfileDetailUser
+    showMessageButton: boolean
+  } | null>(null)
 
   // When we land here from a Match tap, force-select that partner and clear
   // the navigation state so a refresh doesn't keep re-opening the same chat.
@@ -97,6 +111,45 @@ export function MessagesPage() {
     }
     return map
   }, [matches, conversations])
+
+  /**
+   * Opens the profile detail modal for the given partner. Looks up the
+   * rich profile from `partners` first (existing conversations) then
+   * falls back to the matches list (new matches with no message history).
+   * Hides the Message button when the user is already actively chatting
+   * with this person — there's nowhere new to go.
+   */
+  const openProfileFor = useCallback(
+    (userId: string) => {
+      const fromPartners = partners.get(userId)
+      const fromMatches = matches.find((m) => m.user.user_id === userId)?.user
+      const user = (fromPartners ?? fromMatches) as ProfileDetailUser | undefined
+      if (!user) return
+      setOpenProfile({ user, showMessageButton: activeId !== userId })
+    },
+    [partners, matches, activeId],
+  )
+
+  /**
+   * Unmatch flow — drop the conversation + cached thread locally before the
+   * API call so the UI updates instantly. If we were chatting with this
+   * person we also clear `activeId` so the chat pane resets to the empty
+   * state. The hook handles its own optimistic match-list update + rollback.
+   */
+  const handleUnmatch = useCallback(
+    async (userId: string) => {
+      removePartner(userId)
+      setThreads((prev) => {
+        if (!prev.has(userId)) return prev
+        const next = new Map(prev)
+        next.delete(userId)
+        return next
+      })
+      if (activeId === userId) setActiveId(null)
+      await unmatch(userId)
+    },
+    [unmatch, removePartner, activeId],
+  )
 
   // Auto-select the first real conversation once loaded
   useEffect(() => {
@@ -172,8 +225,8 @@ export function MessagesPage() {
         conversations={conversations}
         recentMatches={recentMatches}
         activeId={activeId ?? undefined}
-        onSelect={setActiveId}
-        onSelectMatch={setActiveId}
+        onSelect={openProfileFor}
+        onSelectMatch={openProfileFor}
       />
 
       {activeConversation ? (
@@ -181,6 +234,7 @@ export function MessagesPage() {
           conversation={activeConversation}
           messages={activeMessages}
           onSend={handleSend}
+          onProfileClick={() => openProfileFor(activeConversation.id)}
         />
       ) : (
         <div className="flex-1 flex items-center justify-center">
@@ -206,6 +260,22 @@ export function MessagesPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Profile detail modal — opened from the carousel, the conversation
+          list, or the chat header. Message CTA is hidden when we're already
+          chatting with this person. */}
+      {openProfile && (
+        <UserProfileModal
+          user={openProfile.user}
+          onClose={() => setOpenProfile(null)}
+          onMessage={
+            openProfile.showMessageButton
+              ? () => setActiveId(openProfile.user.user_id)
+              : undefined
+          }
+          onUnmatch={() => handleUnmatch(openProfile.user.user_id)}
+        />
       )}
     </div>
   )

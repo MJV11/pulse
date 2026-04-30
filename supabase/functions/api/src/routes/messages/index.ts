@@ -2,6 +2,8 @@
 import express, { Request, Response } from 'npm:express@4.18.2';
 import { requireAuth } from '../../middlewares/auth.ts';
 import { getServiceClient } from '../../utils/supabase.ts';
+import { areUsersMatched } from '../../utils/matches.ts';
+import { fetchStravaSnapshots } from '../../utils/strava.ts';
 
 interface AuthenticatedRequest extends Request {
   user: { id: string; email?: string; [key: string]: unknown };
@@ -50,13 +52,37 @@ router.get('/conversations', requireAuth, async (req: Request, res: Response) =>
 
     const partnerIds = Array.from(latestByPartner.keys());
 
+    // Restrict to currently-matched partners. A user could have history
+    // with someone they unmatched; we hide those threads from the list so
+    // they can't be re-opened from the UI. Pre-existing messages stay in
+    // the database — this is purely a visibility gate.
+    const { data: matchRows, error: matchErr } = await supabase
+      .from('matches')
+      .select('user_id, match_user_id')
+      .or(`user_id.eq.${userId},match_user_id.eq.${userId}`);
+    if (matchErr) {
+      console.error('Error filtering conversations by match:', matchErr);
+      res.status(500).json({ error: { message: 'Failed to fetch conversations' } });
+      return;
+    }
+    const matchedSet = new Set<string>();
+    for (const m of matchRows ?? []) {
+      matchedSet.add(m.user_id === userId ? m.match_user_id : m.user_id);
+    }
+    const visiblePartnerIds = partnerIds.filter((id) => matchedSet.has(id));
+
+    if (visiblePartnerIds.length === 0) {
+      res.json({ data: [] });
+      return;
+    }
+
     // Fetch user_details for all partners (forward-compat: select * and strip
     // the binary `location` column before sending). Anything new added to
     // user_details flows through automatically.
     const { data: profiles, error: profileErr } = await supabase
       .from('user_details')
       .select('*')
-      .in('user_id', partnerIds);
+      .in('user_id', visiblePartnerIds);
 
     if (profileErr) {
       console.error('Error fetching partner profiles:', profileErr);
@@ -69,7 +95,7 @@ router.get('/conversations', requireAuth, async (req: Request, res: Response) =>
     const { data: photos, error: photosErr } = await supabase
       .from('profile_photos')
       .select('user_id, storage_path, position, created_at')
-      .in('user_id', partnerIds)
+      .in('user_id', visiblePartnerIds)
       .order('position', { ascending: true })
       .order('created_at', { ascending: true });
 
@@ -94,16 +120,23 @@ router.get('/conversations', requireAuth, async (req: Request, res: Response) =>
       }),
     );
 
-    const data = partnerIds.map((partnerId) => {
+    // Strava snapshot per partner so the profile modal opened from the
+    // messages page renders the same FTP + 14d activity panel as discovery.
+    const stravaByUser = await fetchStravaSnapshots(visiblePartnerIds);
+
+    const data = visiblePartnerIds.map((partnerId) => {
       const lastMsg = latestByPartner.get(partnerId)!;
       const profile = profileMap.get(partnerId) as
         | (Record<string, unknown> & { user_name?: string | null })
         | undefined;
+      const strava = stravaByUser.get(partnerId);
       return {
         ...(profile ?? {}),
         partner_id: partnerId,
         partner_name: profile?.user_name ?? null,
         partner_first_photo_path: firstPhotoByUser.get(partnerId) ?? null,
+        strava_ftp: strava?.strava_ftp ?? null,
+        strava_stats: strava?.strava_stats ?? [],
         last_message: lastMsg.content,
         last_message_at: lastMsg.created_at,
         is_sent_by_me: lastMsg.from_user_id === userId,
@@ -121,12 +154,24 @@ router.get('/conversations', requireAuth, async (req: Request, res: Response) =>
  * GET /api/messages/:userId
  * Returns the full message thread between the authenticated user and :userId,
  * ordered oldest-first so the UI can render top-to-bottom naturally.
+ *
+ * Gated on a mutual match — non-matched users get a 403. This keeps users
+ * from peeking at threads with someone they unmatched, and from probing the
+ * existence of a thread by user_id.
  */
 router.get('/:userId', requireAuth, async (req: Request, res: Response) => {
   const { id: currentUserId } = (req as AuthenticatedRequest).user;
   const { userId: partnerId } = req.params;
 
   try {
+    const matched = await areUsersMatched(currentUserId, partnerId);
+    if (!matched) {
+      res.status(403).json({
+        error: { message: 'You can only view conversations with users you have matched with' },
+      });
+      return;
+    }
+
     const { data, error } = await supabase
       .from('messages')
       .select('id, from_user_id, to_user_id, content, reacted_with, created_at, modified_at')
@@ -151,7 +196,8 @@ router.get('/:userId', requireAuth, async (req: Request, res: Response) => {
 
 /**
  * POST /api/messages
- * Sends a message to another user.
+ * Sends a message to another user. Gated on a mutual match — sending to a
+ * non-matched user returns 403.
  * Body: { to_user_id: string, content: string }
  */
 router.post('/', requireAuth, async (req: Request, res: Response) => {
@@ -166,12 +212,20 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     res.status(400).json({ error: { message: '`content` must be a non-empty string' } });
     return;
   }
-  /** if (to_user_id === fromUserId) {
+  if (to_user_id === fromUserId) {
     res.status(400).json({ error: { message: 'Cannot send a message to yourself' } });
     return;
-  } */
+  }
 
   try {
+    const matched = await areUsersMatched(fromUserId, to_user_id);
+    if (!matched) {
+      res.status(403).json({
+        error: { message: 'You can only message users you have matched with' },
+      });
+      return;
+    }
+
     const supabase = getServiceClient();
 
     const { data, error } = await supabase

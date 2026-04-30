@@ -13,6 +13,15 @@ create table if not exists public.user_details (
   -- Age range the user wants to see in discovery. Defaults to "show everyone".
   min_age_pref integer                  not null default 18,
   max_age_pref integer                  not null default 99,
+  -- FTP (cycling functional threshold power, watts) range the user wants to
+  -- see in discovery. Defaults to the full slider range so the filter is a
+  -- no-op until the user moves the handles.
+  min_ftp_pref integer                  not null default 50,
+  max_ftp_pref integer                  not null default 500,
+  -- When true, discovery hides users we don't have a known FTP for. When
+  -- false (the default), unknown-FTP users are still shown — only known
+  -- FTPs that fall outside [min_ftp_pref, max_ftp_pref] are excluded.
+  require_ftp  boolean                  not null default false,
   created_at  timestamptz               not null default now(),
   updated_at  timestamptz               not null default now()
 );
@@ -24,7 +33,10 @@ alter table public.user_details
   add column if not exists gender       text,
   add column if not exists looking_for  text,
   add column if not exists min_age_pref integer not null default 18,
-  add column if not exists max_age_pref integer not null default 99;
+  add column if not exists max_age_pref integer not null default 99,
+  add column if not exists min_ftp_pref integer not null default 50,
+  add column if not exists max_ftp_pref integer not null default 500,
+  add column if not exists require_ftp  boolean not null default false;
 
 -- Sanity check: birthday can't be in the future and the user has to be a
 -- plausible human age (under 120). Drop-and-recreate so re-running this
@@ -55,6 +67,14 @@ alter table public.user_details
 alter table public.user_details
   add constraint user_details_age_pref_check
   check (min_age_pref >= 18 and max_age_pref <= 99 and min_age_pref <= max_age_pref);
+
+-- FTP slider bounds match the frontend (50–500W). Drop-and-recreate so the
+-- migration stays idempotent.
+alter table public.user_details
+  drop constraint if exists user_details_ftp_pref_check;
+alter table public.user_details
+  add constraint user_details_ftp_pref_check
+  check (min_ftp_pref >= 50 and max_ftp_pref <= 500 and min_ftp_pref <= max_ftp_pref);
 
 drop trigger if exists set_user_details_updated_at on public.user_details;
 create trigger set_user_details_updated_at

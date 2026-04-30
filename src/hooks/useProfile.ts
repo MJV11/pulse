@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
+import type { StravaSportStat } from '../lib/types'
 
 /** How a user identifies themselves. */
 export type Gender = 'man' | 'woman' | 'nonbinary'
@@ -24,6 +25,16 @@ export interface UserProfile {
   min_age_pref: number
   /** Maximum age the user wants to see in discovery (defaults to 99). */
   max_age_pref: number
+  /** Minimum FTP (watts) the user wants to see in discovery (defaults to 50). */
+  min_ftp_pref: number
+  /** Maximum FTP (watts) the user wants to see in discovery (defaults to 500). */
+  max_ftp_pref: number
+  /**
+   * When true, discovery hides users without a known Strava FTP. When false,
+   * unknown-FTP users are still shown and only known-out-of-range FTPs are
+   * filtered out.
+   */
+  require_ftp: boolean
   /** Storage path of the user's first gallery photo (lowest position), or null. */
   first_photo_path: string | null
   /**
@@ -32,6 +43,19 @@ export interface UserProfile {
    * they have lapsed. `> now()` means they are actively premium.
    */
   premium_expires_at: string | null
+  /**
+   * Self-reported FTP (functional threshold power, watts) pulled from the
+   * user's Strava profile on each stats sync. `null` when Strava isn't
+   * connected or the athlete hasn't set one in Strava.
+   */
+  strava_ftp: number | null
+  /** ISO timestamp of the last successful Strava stats sync, or null. */
+  strava_synced_at: string | null
+  /**
+   * 14-day rolling per-sport-type activity stats. Empty array when Strava
+   * isn't connected or the user hasn't logged anything in the window.
+   */
+  strava_stats: StravaSportStat[]
   created_at: string
   updated_at: string
 }

@@ -11,6 +11,40 @@ export interface DiscoveryProfile {
   interests: string[]
 }
 
+/**
+ * 14-day per-sport-type Strava activity summary. Compiled server-side from
+ * the user's Strava activity feed and refreshed at most once per hour. The
+ * `sport_type` matches Strava's own classification (e.g. 'Ride', 'Run',
+ * 'TrailRun', 'VirtualRide', 'Swim', 'Hike').
+ */
+export interface StravaSportStat {
+  sport_type: string
+  activity_count_14d: number
+  total_seconds_14d: number
+  /** ISO timestamp of the most recent activity of this type within the 14d window. */
+  latest_activity_at: string | null
+}
+
+/**
+ * Loose user shape consumed by `ProfileDetailCard` and the user profile
+ * modal. The discovery feed (`NearbyUser`), matches list (`MatchedUser`),
+ * and conversation partners (`ConversationPartner`) all satisfy this — we
+ * keep it intentionally permissive so any of them can be passed in directly.
+ */
+export interface ProfileDetailUser {
+  user_id: string
+  user_name: string | null
+  bio: string | null
+  birthday: string | null
+  sports: string[]
+  rating?: number | null
+  first_photo_path: string | null
+  /** Distance in miles from the viewer. Only set in the discovery feed. */
+  distance_miles?: number
+  strava_ftp?: number | null
+  strava_stats?: StravaSportStat[]
+}
+
 export interface Conversation {
   id: string
   name: string

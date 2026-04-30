@@ -1,12 +1,22 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { MatchCard } from '../components/matches/MatchCard'
+import { UserProfileModal } from '../components/discovery/UserProfileModal'
 import { useMatches } from '../hooks/useMatches'
+import type { MatchedUser } from '../hooks/useMatches'
 
 /**
  * Matches page — responsive grid of match profile cards, each styled like
  * the discovery card but backed by real data from the matches + user_details tables.
+ *
+ * Clicking a card opens the same scrollable profile view used in discovery,
+ * framed in a modal with a "Message" CTA at the bottom that navigates to
+ * the chat with that match.
  */
 export function MatchesPage() {
-  const { matches, loading, error } = useMatches()
+  const { matches, loading, error, unmatch } = useMatches()
+  const navigate = useNavigate()
+  const [openUser, setOpenUser] = useState<MatchedUser | null>(null)
 
   return (
     <main className="min-h-screen flex flex-col p-12">
@@ -77,9 +87,25 @@ export function MatchesPage() {
       {!loading && !error && matches.length > 0 && (
         <div className="grid grid-cols-2 xl:grid-cols-3 gap-8">
           {matches.map((match) => (
-            <MatchCard key={match.match_id} match={match} />
+            <MatchCard
+              key={match.match_id}
+              match={match}
+              onClick={() => setOpenUser(match.user)}
+            />
           ))}
         </div>
+      )}
+
+      {/* Profile detail modal — same layout as discovery, with a Message CTA */}
+      {openUser && (
+        <UserProfileModal
+          user={openUser}
+          onClose={() => setOpenUser(null)}
+          onMessage={() =>
+            navigate('/messages', { state: { partnerId: openUser.user_id } })
+          }
+          onUnmatch={() => unmatch(openUser.user_id)}
+        />
       )}
     </main>
   )

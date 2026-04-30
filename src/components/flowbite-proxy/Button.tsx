@@ -27,6 +27,11 @@ const buttonTheme = {
     'pulse-neutral':
       'border border-transparent bg-[#2B2D42] text-white ' +
       'focus:ring-4 focus:ring-[#2B2D42]/30 enabled:hover:bg-[#1e2030]',
+    // Quartiery  destructive solid red — used for confirm-step actions
+    // (e.g. "Unmatch", "Delete") where the user has already opted in once.
+    'pulse-quaternary':
+      'border border-transparent bg-[#f1f5f9] text-[#475569] ' +
+      'focus:ring-4 focus:ring-[#dc2626]/30 enabled:hover:bg-[#e2e8f0]',
 
     
     primary:
