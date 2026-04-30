@@ -1,0 +1,36 @@
+---
+description: Convention for editing Supabase migrations in this project
+globs: supabase/migrations/**/*.sql
+alwaysApply: false
+---
+
+# Supabase Migration Convention
+
+**Never create a new migration file** when the change can go into an existing one. Always edit the relevant existing migration instead.
+
+## When to edit vs. create
+
+| Situation | Action |
+|-----------|--------|
+| Adding a column to an existing table | Edit the migration that created that table |
+| Changing a function or RPC | Edit the migration that last defined that function |
+| Truly independent, irreversible schema change (e.g. new table, new extension) | Create a new file |
+
+## How to edit safely
+
+All DDL in this project is written to be **idempotent** (`CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS` / re-add, `CREATE OR REPLACE FUNCTION`, etc.). Follow the same pattern when adding to an existing file so re-running the migration never fails.
+
+## Examples
+
+```sql
+-- ✅ Adding a column — edit the table's migration
+alter table public.user_details
+  add column if not exists min_age_pref integer not null default 18;
+
+-- ✅ Updating a function — replace in-place in the migration that owns it
+drop function if exists public.get_user_profile;
+create or replace function public.get_user_profile(...) ...
+
+-- ❌ Don't create 20260429000000_age_preferences.sql just to add columns
+--    to user_details and tweak nearby_users — edit the originals instead.
+```

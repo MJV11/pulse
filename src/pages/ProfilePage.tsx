@@ -84,6 +84,21 @@ export function ProfilePage() {
     }
   }
 
+  /** Persists updated age range preferences. Called on slider release. */
+  async function saveAgePrefs(min: number, max: number) {
+    if (!session?.access_token) return
+    setError(null)
+    try {
+      await apiFetch<{ data: UserProfile }>('/users/me', session.access_token, {
+        method: 'PUT',
+        body: JSON.stringify({ min_age_pref: min, max_age_pref: max }),
+      })
+      await refresh()
+    } catch (err) {
+      setError((err as Error).message ?? 'Something went wrong')
+    }
+  }
+
   const displayName = isEditing ? draftName : (profile?.user_name ?? null)
   const displayBio = isEditing ? draftBio : (profile?.bio ?? null)
   const displayBirthday = isEditing ? draftBirthday : (profile?.birthday ?? null)
@@ -139,8 +154,11 @@ export function ProfilePage() {
           />
           <AccountSettings
             lookingFor={profile?.looking_for ?? null}
+            minAgePref={profile?.min_age_pref ?? 18}
+            maxAgePref={profile?.max_age_pref ?? 99}
             isLoading={loading}
             onLookingForChange={saveLookingFor}
+            onAgePrefsChange={saveAgePrefs}
           />
         </div>
       </div>

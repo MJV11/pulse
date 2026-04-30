@@ -46,7 +46,8 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
  * Upserts the authenticated user's profile.
  * Accepted body fields: user_name, bio, birthday (YYYY-MM-DD), sports,
  * gender ('man' | 'woman' | 'nonbinary'),
- * looking_for ('man' | 'woman' | 'nonbinary' | 'all').
+ * looking_for ('man' | 'woman' | 'nonbinary' | 'all'),
+ * min_age_pref (integer 18–99), max_age_pref (integer 18–99, >= min_age_pref).
  */
 const ALLOWED_GENDERS = new Set(['man', 'woman', 'nonbinary']);
 const ALLOWED_LOOKING_FOR = new Set(['man', 'woman', 'nonbinary', 'all']);
@@ -54,13 +55,15 @@ const ALLOWED_LOOKING_FOR = new Set(['man', 'woman', 'nonbinary', 'all']);
 router.put('/me', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
 
-  const { user_name, bio, birthday, sports, gender, looking_for } = req.body as {
+  const { user_name, bio, birthday, sports, gender, looking_for, min_age_pref, max_age_pref } = req.body as {
     user_name?: string;
     bio?: string;
     birthday?: string | null;
     sports?: string[];
     gender?: string | null;
     looking_for?: string | null;
+    min_age_pref?: unknown;
+    max_age_pref?: unknown;
   };
 
   if (sports !== undefined && !Array.isArray(sports)) {
@@ -88,6 +91,26 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
     res.status(400).json({
       error: { message: '`looking_for` must be one of "man", "woman", "nonbinary", "all"' },
     });
+    return;
+  }
+
+  // min_age_pref / max_age_pref: integers in [18, 99], min ≤ max
+  if (min_age_pref !== undefined) {
+    if (typeof min_age_pref !== 'number' || !Number.isInteger(min_age_pref) || min_age_pref < 18 || min_age_pref > 99) {
+      res.status(400).json({ error: { message: '`min_age_pref` must be an integer between 18 and 99' } });
+      return;
+    }
+  }
+
+  if (max_age_pref !== undefined) {
+    if (typeof max_age_pref !== 'number' || !Number.isInteger(max_age_pref) || max_age_pref < 18 || max_age_pref > 99) {
+      res.status(400).json({ error: { message: '`max_age_pref` must be an integer between 18 and 99' } });
+      return;
+    }
+  }
+
+  if (min_age_pref !== undefined && max_age_pref !== undefined && (min_age_pref as number) > (max_age_pref as number)) {
+    res.status(400).json({ error: { message: '`min_age_pref` must be less than or equal to `max_age_pref`' } });
     return;
   }
 
@@ -123,6 +146,8 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
   if (sports !== undefined) patch.sports = sports;
   if (gender !== undefined) patch.gender = gender;
   if (looking_for !== undefined) patch.looking_for = looking_for;
+  if (min_age_pref !== undefined) patch.min_age_pref = min_age_pref;
+  if (max_age_pref !== undefined) patch.max_age_pref = max_age_pref;
 
   try {
     const { data, error } = await supabase

@@ -46,10 +46,10 @@ create trigger premium_users_updated_at
   for each row
   execute function public.premium_users_set_updated_at();
 
--- ── Refresh get_user_profile to surface premium expiry ───────────────────────
--- The profile RPC now LEFT JOINs premium_users so the frontend gets premium
--- status in the same round-trip as the rest of the profile. Clients derive
--- `isPremium` from `premium_expires_at > now()`.
+-- ── Refresh get_user_profile to surface premium expiry + age prefs ───────────
+-- The profile RPC LEFT JOINs premium_users so the frontend gets premium status
+-- in the same round-trip as the rest of the profile. Clients derive `isPremium`
+-- from `premium_expires_at > now()`.
 drop function if exists public.get_user_profile;
 create or replace function public.get_user_profile(p_user_id uuid)
 returns table (
@@ -61,6 +61,8 @@ returns table (
   rating             numeric,
   gender             text,
   looking_for        text,
+  min_age_pref       integer,
+  max_age_pref       integer,
   first_photo_path   text,
   latitude           float8,
   longitude          float8,
@@ -81,6 +83,8 @@ as $$
     ud.rating,
     ud.gender,
     ud.looking_for,
+    ud.min_age_pref,
+    ud.max_age_pref,
     (
       select pp.storage_path
       from public.profile_photos pp

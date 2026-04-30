@@ -20,6 +20,10 @@ export interface UserProfile {
   gender: Gender | null
   /** Who the user wants to see in discovery, or null if unset. */
   looking_for: LookingFor | null
+  /** Minimum age the user wants to see in discovery (defaults to 18). */
+  min_age_pref: number
+  /** Maximum age the user wants to see in discovery (defaults to 99). */
+  max_age_pref: number
   /** Storage path of the user's first gallery photo (lowest position), or null. */
   first_photo_path: string | null
   /**

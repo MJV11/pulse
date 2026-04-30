@@ -10,16 +10,21 @@ create table if not exists public.user_details (
   gender      text,
   -- Who the user wants to see in discovery. NULL until set.
   looking_for text,
+  -- Age range the user wants to see in discovery. Defaults to "show everyone".
+  min_age_pref integer                  not null default 18,
+  max_age_pref integer                  not null default 99,
   created_at  timestamptz               not null default now(),
   updated_at  timestamptz               not null default now()
 );
 
--- For databases that already had this table before `birthday` / gender
--- columns were added, bring them in line with the new shape.
+-- For databases that already had this table before these columns were added,
+-- bring them in line with the current shape.
 alter table public.user_details
-  add column if not exists birthday    date,
-  add column if not exists gender      text,
-  add column if not exists looking_for text;
+  add column if not exists birthday     date,
+  add column if not exists gender       text,
+  add column if not exists looking_for  text,
+  add column if not exists min_age_pref integer not null default 18,
+  add column if not exists max_age_pref integer not null default 99;
 
 -- Sanity check: birthday can't be in the future and the user has to be a
 -- plausible human age (under 120). Drop-and-recreate so re-running this
@@ -44,6 +49,12 @@ alter table public.user_details
 alter table public.user_details
   add constraint user_details_looking_for_check
   check (looking_for is null or looking_for in ('man', 'woman', 'nonbinary', 'all'));
+
+alter table public.user_details
+  drop constraint if exists user_details_age_pref_check;
+alter table public.user_details
+  add constraint user_details_age_pref_check
+  check (min_age_pref >= 18 and max_age_pref <= 99 and min_age_pref <= max_age_pref);
 
 drop trigger if exists set_user_details_updated_at on public.user_details;
 create trigger set_user_details_updated_at

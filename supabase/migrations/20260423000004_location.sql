@@ -36,20 +36,22 @@ $$;
 -- the function forward-compatible: any new column added to user_details
 -- automatically appears in the response without needing a migration here.
 --
--- When `exclude_user_id` is supplied we also enforce *mutual gender
--- eligibility*:
+-- When `exclude_user_id` is supplied we also enforce *mutual* eligibility for
+-- both gender and age:
 --   • the searcher's `looking_for` must be 'all' (or unset) or match the
---     candidate's gender
---   • the candidate's `looking_for` must be 'all' (or unset) or match the
---     searcher's gender
--- This means brand-new users who haven't set preferences yet are still
--- visible (and can still see others) until they fill them in.
+--     candidate's gender — and vice-versa
+--   • the candidate's computed age must fall within the searcher's preferred
+--     age range — and vice-versa
+-- Either side missing a birthday → that directional age check is skipped
+-- (permissive), so brand-new users stay visible while filling in their profile.
 DROP FUNCTION IF EXISTS public.nearby_users;
 create or replace function public.nearby_users(
-  lat              float8,
-  lng              float8,
-  radius_miles     float8  default 50,
-  exclude_user_id  uuid    default null
+  lat                float8,
+  lng                float8,
+  radius_miles       float8  default 50,
+  exclude_user_id    uuid    default null,
+  searcher_min_age   integer default null,
+  searcher_max_age   integer default null
 )
 returns table (
   user_data        jsonb,
@@ -61,7 +63,7 @@ stable
 security definer
 as $$
   with searcher as (
-    select gender, looking_for
+    select gender, looking_for, birthday
     from public.user_details
     where user_id = exclude_user_id
   )
@@ -88,27 +90,51 @@ as $$
       ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography,
       radius_miles * 1609.344  -- convert miles → metres
     )
-    -- Searcher's looking_for must include this candidate's gender
+    -- Gender: searcher's looking_for must include this candidate's gender
     and (
       exclude_user_id is null
       or s.looking_for is null
       or s.looking_for = 'all'
       or s.looking_for = ud.gender
     )
-    -- Candidate's looking_for must include the searcher's gender (mutual)
+    -- Gender: candidate's looking_for must include the searcher's gender (mutual)
     and (
       exclude_user_id is null
       or ud.looking_for is null
       or ud.looking_for = 'all'
       or ud.looking_for = s.gender
     )
+    -- Age: candidate's age must be >= searcher's minimum preference
+    and (
+      searcher_min_age is null
+      or ud.birthday is null
+      or extract(year from age(current_date, ud.birthday)) >= searcher_min_age
+    )
+    -- Age: candidate's age must be <= searcher's maximum preference
+    and (
+      searcher_max_age is null
+      or ud.birthday is null
+      or extract(year from age(current_date, ud.birthday)) <= searcher_max_age
+    )
+    -- Age: searcher's age must be >= candidate's minimum preference (mutual)
+    and (
+      exclude_user_id is null
+      or s.birthday is null
+      or extract(year from age(current_date, s.birthday)) >= ud.min_age_pref
+    )
+    -- Age: searcher's age must be <= candidate's maximum preference (mutual)
+    and (
+      exclude_user_id is null
+      or s.birthday is null
+      or extract(year from age(current_date, s.birthday)) <= ud.max_age_pref
+    )
   order by distance_miles asc;
 $$;
 
 
 -- Wraps nearby_users so the API never has to parse a WKB geography value.
--- Looks up the calling user's stored location via ST_X/ST_Y, then delegates
--- to the existing nearby_users function.
+-- Looks up the calling user's stored location and age prefs via a single row
+-- fetch, then delegates to nearby_users.
 DROP FUNCTION IF EXISTS public.discovery_feed;
 create or replace function public.discovery_feed(
   p_user_id    uuid,
@@ -124,13 +150,17 @@ stable
 security definer
 as $$
 declare
-  v_lat float8;
-  v_lng float8;
+  v_lat     float8;
+  v_lng     float8;
+  v_min_age integer;
+  v_max_age integer;
 begin
   select
     ST_Y(ud.location::geometry),
-    ST_X(ud.location::geometry)
-  into v_lat, v_lng
+    ST_X(ud.location::geometry),
+    ud.min_age_pref,
+    ud.max_age_pref
+  into v_lat, v_lng, v_min_age, v_max_age
   from public.user_details ud
   where ud.user_id = p_user_id;
 
@@ -140,6 +170,8 @@ begin
   end if;
 
   return query
-    select * from public.nearby_users(v_lat, v_lng, radius_miles, p_user_id);
+    select * from public.nearby_users(
+      v_lat, v_lng, radius_miles, p_user_id, v_min_age, v_max_age
+    );
 end;
 $$;
