@@ -1,4 +1,4 @@
-import type { Conversation } from '../../lib/data'
+import type { Conversation } from '../../lib/types'
 import { UserAvatar } from '../common/UserAvatar'
 
 interface ChatHeaderProps {

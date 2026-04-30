@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+all folders should have an index.ts bundler that exports their items to the next level. 
+
+all types should go in the file types.ts. 

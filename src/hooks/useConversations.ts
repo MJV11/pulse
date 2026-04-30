@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { formatRelativeShort } from '../lib/time'
-import type { Conversation } from '../lib/data'
+import type { Conversation } from '../lib/types'
 
 interface ConversationEntry {
   partner_id: string

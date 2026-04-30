@@ -1,8 +1,8 @@
-import type { Conversation } from '../../lib/data'
+import type { Conversation } from '../../lib/types'
 import type { MatchItem } from '../../hooks/useMatches'
 import { ConversationItem } from './ConversationItem'
 import { NewMatchesCarousel } from './NewMatchesCarousel'
-import { MSG_ICON_FILTER } from '../../lib/assets'
+import { PiFunnel, PiMagnifyingGlass } from 'react-icons/pi'
 
 interface ConversationListProps {
   conversations: Map<string, Conversation>
@@ -38,17 +38,16 @@ export function ConversationList({
       <div className="px-6 py-5 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h1 className="text-[#131b2e] text-base font-semibold">Messages</h1>
-          <button>
-            <img src={MSG_ICON_FILTER} alt="Filter" className="w-[18px] h-[18px] object-contain" />
+          <button aria-label="Filter">
+            <PiFunnel size={20} className="text-[#64748b]" />
           </button>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <img
-            src="https://www.figma.com/api/mcp/asset/e20b6617-05a3-488f-a435-5390df17132d"
-            alt=""
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-[13.5px] h-[13.5px] object-contain pointer-events-none"
+          <PiMagnifyingGlass
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280] pointer-events-none"
           />
           <input
             type="text"

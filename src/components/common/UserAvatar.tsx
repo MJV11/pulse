@@ -1,3 +1,5 @@
+import { gradientFor } from '../../lib'
+
 interface UserAvatarProps {
   /** Public URL of the user's photo, or null/undefined to render the fallback. */
   photoUrl: string | null | undefined
@@ -18,24 +20,11 @@ interface UserAvatarProps {
   alt?: string
 }
 
-const GRADIENTS = [
-  'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)',
-  'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
-  'linear-gradient(135deg, #0369a1 0%, #38bdf8 100%)',
-  'linear-gradient(135deg, #b45309 0%, #fbbf24 100%)',
-  'linear-gradient(135deg, #065f46 0%, #34d399 100%)',
-]
-
 const RADIUS_CLASS: Record<NonNullable<UserAvatarProps['rounded']>, string> = {
   full: 'rounded-full',
   xl: 'rounded-xl',
   '2xl': 'rounded-2xl',
   '3xl': 'rounded-3xl',
-}
-
-function gradientFor(id: string): string {
-  const hash = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return GRADIENTS[hash % GRADIENTS.length]
 }
 
 function initials(name: string | null | undefined): string {

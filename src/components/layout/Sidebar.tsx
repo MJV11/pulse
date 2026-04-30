@@ -5,7 +5,6 @@ import {
   PiHeart,
   PiChats,
   PiUser,
-  PiGear,
   PiSignOut,
 } from 'react-icons/pi'
 import type { IconType } from 'react-icons'
@@ -99,21 +98,6 @@ function ProfileBottomNav() {
 
   return (
     <div className="border-t border-[#f1f5f9] pt-4 flex flex-col gap-1">
-      <NavLink
-        to="/settings"
-        className={({ isActive }) =>
-          `flex items-center gap-4 px-2 py-3 text-base font-semibold transition-colors rounded-xl ${
-            isActive ? 'text-[#dc2626]' : 'text-[#64748b] hover:bg-[#fef2f2]/50 hover:text-[#1d1a20]'
-          }`
-        }
-      >
-        {({ isActive }) => (
-          <>
-            <PiGear size={20} className={isActive ? 'text-[#dc2626]' : 'text-[#94a3b8]'} />
-            <span>Settings</span>
-          </>
-        )}
-      </NavLink>
       <button
         onClick={() => signOut()}
         className="flex items-center gap-4 px-2 py-3 text-base font-semibold text-[#ba1a1a] hover:bg-[#fef2f2]/50 rounded-xl w-full transition-colors"

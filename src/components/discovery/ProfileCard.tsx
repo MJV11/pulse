@@ -1,22 +1,18 @@
-import type { DiscoveryProfile } from '../../lib/data'
+import type { DiscoveryProfile } from '../../lib/types'
 import { MdLocationPin } from 'react-icons/md'
+import { gradientFor } from '../../lib'
 
 interface ProfileCardProps {
   profile: DiscoveryProfile
+  /**
+   * Full list of resolved photo URLs for this user. When provided (and
+   * non-empty) it overrides `profile.photo`; the card shows whichever
+   * photo is at `photoIndex`.
+   */
+  photos?: string[]
+  /** Index into `photos` to display. Defaults to 0. */
+  photoIndex?: number
   onClick?: () => void
-}
-
-const GRADIENTS = [
-  'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)',
-  'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
-  'linear-gradient(135deg, #0369a1 0%, #38bdf8 100%)',
-  'linear-gradient(135deg, #b45309 0%, #fbbf24 100%)',
-  'linear-gradient(135deg, #065f46 0%, #34d399 100%)',
-]
-
-function gradientFor(id: string) {
-  const hash = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return GRADIENTS[hash % GRADIENTS.length]
 }
 
 function initials(name: string) {
@@ -30,11 +26,19 @@ function initials(name: string) {
 
 /**
  * Swipeable profile card with gradient overlay, name, location, and interest chips.
- * When no photo URL is provided the card shows a gradient background with
- * large initials instead — used for real users from the discovery API.
+ *
+ * Supports multiple photos: pass `photos` + `photoIndex` to control which
+ * photo is displayed. Progress dots are shown at the top when there are
+ * multiple photos.
+ *
+ * When no photo URL is resolved the card shows a gradient background with
+ * large initials.
  */
-export function ProfileCard({ profile, onClick }: ProfileCardProps) {
-  const hasPhoto = !!profile.photo
+export function ProfileCard({ profile, photos, photoIndex = 0, onClick }: ProfileCardProps) {
+  const allPhotos = photos?.length ? photos : profile.photo ? [profile.photo] : []
+  const currentPhoto = allPhotos[photoIndex] ?? allPhotos[0] ?? null
+  const hasPhoto = !!currentPhoto
+  const multiPhoto = allPhotos.length > 1
 
   return (
     <div
@@ -48,7 +52,7 @@ export function ProfileCard({ profile, onClick }: ProfileCardProps) {
       {/* Photo or ghost initials */}
       {hasPhoto ? (
         <img
-          src={profile.photo}
+          src={currentPhoto!}
           alt={profile.name}
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -62,6 +66,20 @@ export function ProfileCard({ profile, onClick }: ProfileCardProps) {
 
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+
+      {/* Photo progress dots — only shown when there are multiple photos */}
+      {multiPhoto && (
+        <div className="absolute top-4 left-4 right-4 flex gap-1.5">
+          {allPhotos.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1 flex-1 rounded-full transition-all duration-200 ${
+                i === photoIndex ? 'bg-white' : 'bg-white/35'
+              }`}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Info overlay */}
       <div className="absolute bottom-0 left-0 right-0 px-8 pb-10 pt-8 flex flex-col gap-4">

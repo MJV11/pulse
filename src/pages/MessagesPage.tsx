@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { apiFetch } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { formatTime } from '../lib/time'
-import type { Conversation, Message } from '../lib/data'
+import type { Conversation, Message } from '../lib/types'
 
 interface DbMessage {
   id: string

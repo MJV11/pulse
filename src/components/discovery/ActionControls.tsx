@@ -1,50 +1,31 @@
-import { PiHeart, PiX } from 'react-icons/pi'
-import {
-  DISCOVERY_BTN_REWIND,
-  DISCOVERY_BTN_STAR,
-} from '../../lib/assets'
+import { PiArrowCounterClockwise, PiHeart, PiX } from 'react-icons/pi'
 
 interface ActionControlsProps {
   onRewind?: () => void
   onDislike?: () => void
-  onSuperPulse?: () => void
   onLike?: () => void
-  onBoost?: () => void
 }
 
 /**
  * Row of swipe-action buttons below the profile card.
- * Order: Rewind · Dislike · Super Pulse · Like
+ * Order: Rewind · Dislike · Like
  *
- * Rewind and Super Pulse are only rendered when their handlers are
- * provided, which lets callers gate them (e.g. behind Pulse Premium).
+ * Rewind is only rendered when its handler is provided (premium-gated).
  */
-export function ActionControls({
-  onRewind,
-  onDislike,
-  onSuperPulse,
-  onLike,
-}: ActionControlsProps) {
+export function ActionControls({ onRewind, onDislike, onLike }: ActionControlsProps) {
   return (
     <div className="flex items-center gap-6">
       {/* Rewind — premium-only */}
       {onRewind && (
         <ActionButton size="sm" onClick={onRewind} shadow="subtle" label="Rewind">
-          <img src={DISCOVERY_BTN_REWIND} alt="" className="w-[18px] h-[21px] object-contain" />
+          <PiArrowCounterClockwise size={20} className="text-[#64748b]" />
         </ActionButton>
       )}
 
       {/* Dislike */}
-      <ActionButton size="lg" onClick={onDislike} shadow="normal" label="Dislike">
-        <PiX size={36} className='text-pink-600' />
+      <ActionButton size="lg" onClick={onDislike} shadow="normal" label="Nope">
+        <PiX size={36} className="text-pink-600" />
       </ActionButton>
-
-      {/* Super Pulse — premium-only */}
-      {onSuperPulse && (
-        <ActionButton size="md" onClick={onSuperPulse} shadow="subtle" label="Super Pulse">
-          <img src={DISCOVERY_BTN_STAR} alt="" className="w-[25px] h-[25px] object-contain" />
-        </ActionButton>
-      )}
 
       {/* Like */}
       <button
@@ -53,7 +34,7 @@ export function ActionControls({
         style={{ background: 'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)' }}
         aria-label="Like"
       >
-        <PiHeart size={36} className='text-white' />
+        <PiHeart size={36} className="text-white" />
       </button>
     </div>
   )

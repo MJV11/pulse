@@ -6,19 +6,18 @@ import { UserProfileModal } from '../components/discovery/UserProfileModal'
 import { MatchCelebration } from '../components/discovery/MatchCelebration'
 import { useDiscovery } from '../hooks/useDiscovery'
 import type { NearbyUser } from '../hooks/useDiscovery'
-import type { DiscoveryProfile } from '../lib/data'
+import type { DiscoveryProfile } from '../lib/types'
 import { supabase } from '../lib/supabase'
 import { apiFetch } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { useProfile } from '../context/ProfileContext'
 import { calculateAge } from '../lib/age'
+import { gradientFor } from '../lib'
 
 interface LikeResponse {
   data: {
     matched: boolean
     match_id?: string
-    // Mirror of MatchedUser — server selects * from user_details and includes
-    // first_photo_path; treat as forward-compatible.
     user?: {
       user_id: string
       user_name: string | null
@@ -71,6 +70,12 @@ type SwipeDirection = 'left' | 'right' | 'up'
  * profile cards. Like/Dislike/Rewind navigate through the stack.
  * On a mutual like the `process_like` RPC returns `matched: true` and we
  * show a celebration overlay before advancing.
+ *
+ * Keyboard shortcuts:
+ *   ← / →   Nope / Like
+ *   ↑        Open profile
+ *   ↓        Close profile
+ *   Space    Next photo
  */
 export function DiscoveryPage() {
   const { session } = useAuth()
@@ -87,11 +92,41 @@ export function DiscoveryPage() {
   /** Flips to true a frame after a new card mounts so we can animate it in. */
   const [entered, setEntered] = useState(false)
 
+  // ── Multi-photo support ──────────────────────────────────────────────────────
+  /** All resolved photo URLs for the currently visible card. */
+  const [currentPhotos, setCurrentPhotos] = useState<string[]>([])
+  /** Which photo in currentPhotos is being displayed. */
+  const [photoIdx, setPhotoIdx] = useState(0)
+
   const currentUser = users[index]
   const profile = currentUser ? toProfile(currentUser) : null
 
-  // Run an entrance animation each time a new card lands — fires whenever the
-  // active user_id changes (advance, rewind, or initial load).
+  // Fetch all photos for the current user whenever the card changes
+  useEffect(() => {
+    setPhotoIdx(0)
+    setCurrentPhotos([])
+    if (!currentUser || !session?.access_token) return
+
+    let cancelled = false
+    apiFetch<{ data: Array<{ storage_path: string }> }>(
+      `/users/${currentUser.user_id}/photos`,
+      session.access_token,
+    )
+      .then(({ data }) => {
+        if (cancelled) return
+        const urls = data.map(
+          (p) => supabase.storage.from('gallery').getPublicUrl(p.storage_path).data.publicUrl,
+        )
+        setCurrentPhotos(urls)
+      })
+      .catch(() => {
+        // Silently fall back to first_photo_path already on the profile
+      })
+
+    return () => { cancelled = true }
+  }, [currentUser?.user_id, session?.access_token])
+
+  // Run an entrance animation each time a new card lands
   useEffect(() => {
     if (!currentUser) return
     setEntered(false)
@@ -118,8 +153,6 @@ export function DiscoveryPage() {
     async (direction: 'right' | 'up') => {
       if (!currentUser || !session?.access_token || liking || exitDirection) return
       setLiking(true)
-      // Kick off the swipe and the API call in parallel — we wait for both
-      // before deciding to celebrate or advance.
       const animPromise = swipeAway(direction)
       try {
         const resp = await apiFetch<LikeResponse>(
@@ -180,6 +213,45 @@ export function DiscoveryPage() {
     setIndex((i) => Math.max(i - 1, 0))
   }, [exitDirection])
 
+  const handleNextPhoto = useCallback(() => {
+    if (currentPhotos.length > 1) {
+      setPhotoIdx((i) => (i + 1) % currentPhotos.length)
+    }
+  }, [currentPhotos.length])
+
+  // ── Keyboard shortcuts ────────────────────────────────────────────────────────
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      // Don't hijack shortcuts when typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) return
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          handleDislike()
+          break
+        case 'ArrowRight':
+          handleLike()
+          break
+        case 'ArrowUp':
+          if (!modalUser && currentUser) setModalUser(currentUser)
+          break
+        case 'ArrowDown':
+          if (modalUser) setModalUser(null)
+          break
+        case ' ':
+          e.preventDefault()
+          handleNextPhoto()
+          break
+      }
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [handleDislike, handleLike, handleNextPhoto, modalUser, currentUser])
+
   function dismissCelebration() {
     setCelebration(null)
     advance()
@@ -209,11 +281,9 @@ export function DiscoveryPage() {
   const cardOpacity = exitDirection ? 0 : entered ? 1 : 0
 
   return (
-    <>
-      <main className="min-h-screen flex items-center justify-center p-12 relative">
-        {/* Card + controls column — width is set here so children that use
-            `w-full` (ProfileCard, the stacked next-card preview) can actually
-            grow. Without this the column shrink-wraps to ActionControls. */}
+    <div className="flex flex-col min-h-screen">
+      <main className="min-h-[calc(100vh-53px)] flex flex-col items-center justify-center p-12 relative">
+        {/* Card + controls column */}
         <div className="flex flex-col items-center gap-8 w-1/2 max-w-[500px]">
 
           {/* Loading */}
@@ -327,6 +397,8 @@ export function DiscoveryPage() {
                 >
                   <ProfileCard
                     profile={profile}
+                    photos={currentPhotos}
+                    photoIndex={photoIdx}
                     onClick={() => setModalUser(currentUser)}
                   />
                 </div>
@@ -334,13 +406,25 @@ export function DiscoveryPage() {
                   onLike={handleLike}
                   onDislike={handleDislike}
                   onRewind={isPremium && index > 0 ? handleRewind : undefined}
-                  onSuperPulse={isPremium ? handleSuperPulse : undefined}
                 />
               </div>
             </>
           )}
         </div>
       </main>
+      {/* Keyboard shortcut hint bar */}
+      <div className="flex mt-auto items-center justify-center gap-6 py-3 px-6">
+        <KeyHint keys={['←']} label="Nope" />
+        <Divider />
+        <KeyHint keys={['→']} label="Like" />
+        <Divider />
+        <KeyHint keys={['↑']} label="Open Profile" />
+        <Divider />
+        <KeyHint keys={['↓']} label="Close Profile" />
+        <Divider />
+        <KeyHint keys={['Space']} label="Next Photo" />
+      </div>
+
 
       {/* User profile modal */}
       {modalUser && (
@@ -368,20 +452,40 @@ export function DiscoveryPage() {
           onKeepSwiping={dismissCelebration}
         />
       )}
-    </>
+    </div>
   )
 }
 
-const GRADIENTS = [
-  'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)',
-  'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
-  'linear-gradient(135deg, #0369a1 0%, #38bdf8 100%)',
-  'linear-gradient(135deg, #b45309 0%, #fbbf24 100%)',
-  'linear-gradient(135deg, #065f46 0%, #34d399 100%)',
-]
+// ── Keyboard shortcut hint bar ─────────────────────────────────────────────────
+
+interface KeyHintProps {
+  keys: string[]
+  label: string
+}
+
+function KeyHint({ keys, label }: KeyHintProps) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {keys.map((k) => (
+        <kbd
+          key={k}
+          className={`inline-flex items-center justify-center min-w-[28px] h-7 px-1.5 rounded-md border border-[#cbd5e1] bg-white text-[#475569] ${label == 'Next Photo' ? 'text-xs' : 'text-md'} font-semibold shadow-[0_1px_0_0_#cbd5e1] select-none`}
+        >
+          {k}
+        </kbd>
+      ))}
+      <span className="text-[#64748b] text-xs font-medium">{label}</span>
+    </div>
+  )
+}
+
+function Divider() {
+  return <div className="w-px h-4 bg-[#e2e8f0]" />
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function gradientForIndex(i: number, users: NearbyUser[]) {
   const id = users[i]?.user_id ?? String(i)
-  const hash = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return GRADIENTS[hash % GRADIENTS.length]
+  return gradientFor(id)
 }

@@ -1,5 +1,5 @@
 import { Fragment } from 'react'
-import type { Conversation, Message } from '../../lib/data'
+import type { Conversation, Message } from '../../lib/types'
 import { ChatHeader } from './ChatHeader'
 import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
