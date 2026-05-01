@@ -157,14 +157,14 @@ export function StravaActivityPanel({
                 <span className="text-[#1d1a20] font-semibold text-sm">
                   {prettySportLabel(s.sport_type)}
                 </span>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
                   <span className="text-[#534342] font-medium text-sm tabular-nums">
                     {s.activity_count_14d}{' '}
-                    <span className="text-[#94a3b8] font-medium">
+                    <span className="text-[#534342] font-medium">
                       {s.activity_count_14d === 1 ? 'activity' : 'activities'}
                     </span>
                   </span>
-                  <span className="text-[#dc2626] font-semibold text-sm tabular-nums min-w-[3.5rem] text-right">
+                  <span className="text-[#dc2626] font-semibold text-sm tabular-nums min-w-[2.5rem] text-right">
                     {formatHours(s.total_seconds_14d)}
                   </span>
                 </div>

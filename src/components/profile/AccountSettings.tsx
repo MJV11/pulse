@@ -85,6 +85,8 @@ interface AccountSettingsProps {
   maxFtpPref: number
   /** When true, hides users without a known Strava FTP from discovery. */
   requireFtp: boolean
+  /** Maximum discovery radius in miles (1–500, defaults to 50). */
+  maxDistanceMiles: number
   /** When true, renders skeleton placeholders in place of the real content. */
   isLoading?: boolean
   /**
@@ -101,6 +103,8 @@ interface AccountSettingsProps {
    * together because the require flag often pairs with an explicit range.
    */
   onFtpPrefsChange: (min: number, max: number, requireFtp: boolean) => Promise<void> | void
+  /** Persist updated max distance preference. Called on slider release. */
+  onDistanceMilesChange: (miles: number) => Promise<void> | void
 }
 
 export function AccountSettings({
@@ -110,10 +114,12 @@ export function AccountSettings({
   minFtpPref,
   maxFtpPref,
   requireFtp,
+  maxDistanceMiles,
   isLoading = false,
   onLookingForChange,
   onAgePrefsChange,
   onFtpPrefsChange,
+  onDistanceMilesChange,
 }: AccountSettingsProps) {
   const { signOut } = useAuth()
   const [signingOut, setSigningOut] = useState(false)
@@ -169,12 +175,14 @@ export function AccountSettings({
               minFtpPref={minFtpPref}
               maxFtpPref={maxFtpPref}
               requireFtp={requireFtp}
+              maxDistanceMiles={maxDistanceMiles}
               open={preferencesOpen}
               saving={savingPref}
               onToggleOpen={() => setPreferencesOpen((o) => !o)}
               onSelect={handleSelectLookingFor}
               onAgePrefsChange={onAgePrefsChange}
               onFtpPrefsChange={onFtpPrefsChange}
+              onDistanceMilesChange={onDistanceMilesChange}
             />
 
             {Array.from(SETTINGS_ROWS.values()).map((row) => (
@@ -268,12 +276,14 @@ interface PreferencesRowProps {
   minFtpPref: number
   maxFtpPref: number
   requireFtp: boolean
+  maxDistanceMiles: number
   open: boolean
   saving: boolean
   onToggleOpen: () => void
   onSelect: (next: LookingFor) => void
   onAgePrefsChange: (min: number, max: number) => Promise<void> | void
   onFtpPrefsChange: (min: number, max: number, requireFtp: boolean) => Promise<void> | void
+  onDistanceMilesChange: (miles: number) => Promise<void> | void
 }
 
 function PreferencesRow({
@@ -283,12 +293,14 @@ function PreferencesRow({
   minFtpPref,
   maxFtpPref,
   requireFtp,
+  maxDistanceMiles,
   open,
   saving,
   onToggleOpen,
   onSelect,
   onAgePrefsChange,
   onFtpPrefsChange,
+  onDistanceMilesChange,
 }: PreferencesRowProps) {
   // Local draft age range — updated live while dragging; committed on release
   const [localMin, setLocalMin] = useState(minAgePref)
@@ -300,6 +312,10 @@ function PreferencesRow({
   const [localFtpMax, setLocalFtpMax] = useState(maxFtpPref)
   const [localRequireFtp, setLocalRequireFtp] = useState(requireFtp)
   const [savingFtp, setSavingFtp] = useState(false)
+
+  // Local draft distance — updated live while dragging; committed on release
+  const [localDistance, setLocalDistance] = useState(maxDistanceMiles)
+  const [savingDistance, setSavingDistance] = useState(false)
 
   // Keep local state in sync when props change (e.g. after save round-trip)
   const prevMin = useRef(minAgePref)
@@ -313,6 +329,9 @@ function PreferencesRow({
   if (prevFtpMin.current !== minFtpPref) { prevFtpMin.current = minFtpPref; setLocalFtpMin(minFtpPref) }
   if (prevFtpMax.current !== maxFtpPref) { prevFtpMax.current = maxFtpPref; setLocalFtpMax(maxFtpPref) }
   if (prevRequireFtp.current !== requireFtp) { prevRequireFtp.current = requireFtp; setLocalRequireFtp(requireFtp) }
+
+  const prevDistance = useRef(maxDistanceMiles)
+  if (prevDistance.current !== maxDistanceMiles) { prevDistance.current = maxDistanceMiles; setLocalDistance(maxDistanceMiles) }
 
   async function handleAgeCommit(min: number, max: number) {
     setLocalMin(min)
@@ -343,8 +362,18 @@ function PreferencesRow({
     handleFtpCommit(localFtpMin, localFtpMax, next)
   }
 
+  async function handleDistanceCommit(miles: number) {
+    setLocalDistance(miles)
+    setSavingDistance(true)
+    try {
+      await onDistanceMilesChange(miles)
+    } finally {
+      setSavingDistance(false)
+    }
+  }
+
   const description = lookingFor
-    ? `Showing ${LOOKING_FOR_LABEL[lookingFor].toLowerCase()}, ${localMin}–${localMax === 99 ? '99+' : localMax}`
+    ? `Showing ${LOOKING_FOR_LABEL[lookingFor].toLowerCase()}, ${localMin}–${localMax === 99 ? '99+' : localMax}, within ${localDistance} mi`
     : 'Pick who shows up in discovery'
 
   return (
@@ -460,6 +489,26 @@ function PreferencesRow({
               <span className="text-[#94a3b8] text-xs italic">Saving…</span>
             )}
           </div>
+
+          {/* Distance — how far out to search */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[#534342] font-semibold text-xs uppercase tracking-[1.2px]">
+                Distance
+              </span>
+              <span className="text-[#DB2777] font-semibold text-sm tabular-nums">
+                {localDistance === DISTANCE_MAX ? `${DISTANCE_MAX}+ mi` : `${localDistance} mi`}
+              </span>
+            </div>
+            <DistanceSlider
+              miles={localDistance}
+              onChange={setLocalDistance}
+              onCommit={handleDistanceCommit}
+            />
+            {savingDistance && (
+              <span className="text-[#94a3b8] text-xs italic">Saving…</span>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -477,6 +526,12 @@ const FTP_MAX = 500
 // Snap FTP slider movements to 5W increments — finer than that doesn't
 // match how athletes self-report and makes the thumb feel jittery.
 const FTP_STEP = 5
+// Distance slider bounds (miles). Must stay in sync with the API clamp and
+// the `user_details_distance_pref_check` constraint server-side.
+const DISTANCE_MIN = 1
+const DISTANCE_MAX = 500
+// Snap distance slider to 5-mile increments for a comfortable drag feel.
+const DISTANCE_STEP = 5
 
 interface AgeRangeSliderProps {
   minAge: number
@@ -639,6 +694,70 @@ function FtpRangeSlider({ minFtp, maxFtp, onChange, onCommit }: FtpRangeSliderPr
       <div className="flex justify-between mt-2 px-2.5 text-[10px] text-[#94a3b8] font-medium select-none">
         <span>{FTP_MIN}W</span>
         <span>{FTP_MAX}W+</span>
+      </div>
+    </div>
+  )
+}
+
+interface DistanceSliderProps {
+  miles: number
+  /** Called on every drag move so the label updates live. */
+  onChange: (miles: number) => void
+  /** Called once on pointer release — this is when you should persist. */
+  onCommit: (miles: number) => void
+}
+
+/** Single-thumb slider for the max discovery radius in miles. */
+function DistanceSlider({ miles, onChange, onCommit }: DistanceSliderProps) {
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  const toPct = (v: number) => ((v - DISTANCE_MIN) / (DISTANCE_MAX - DISTANCE_MIN)) * 100
+  const pct = toPct(miles)
+
+  function valueFromX(clientX: number): number {
+    const el = trackRef.current
+    if (!el) return DISTANCE_MIN
+    const { left, width } = el.getBoundingClientRect()
+    const raw = DISTANCE_MIN + Math.max(0, Math.min(1, (clientX - left) / width)) * (DISTANCE_MAX - DISTANCE_MIN)
+    return Math.round(raw / DISTANCE_STEP) * DISTANCE_STEP
+  }
+
+  const handlers = {
+    onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    },
+    onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+      if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
+      onChange(Math.max(DISTANCE_MIN, valueFromX(e.clientX)))
+    },
+    onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+      if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
+      onCommit(Math.max(DISTANCE_MIN, valueFromX(e.clientX)))
+    },
+  }
+
+  return (
+    <div className="py-2">
+      <div ref={trackRef} className="relative h-1.5 bg-[#e2e8f0] rounded-full mx-2.5">
+        {/* Active fill from left edge to thumb */}
+        <div
+          className="absolute h-full bg-[#db2777] rounded-full pointer-events-none"
+          style={{ left: 0, right: `${100 - pct}%` }}
+        />
+        <div
+          {...handlers}
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 bg-white border-2 border-[#db2777] rounded-full shadow cursor-grab active:cursor-grabbing touch-none select-none z-10"
+          style={{ left: `${pct}%` }}
+          role="slider"
+          aria-label="Maximum distance in miles"
+          aria-valuenow={miles}
+          aria-valuemin={DISTANCE_MIN}
+          aria-valuemax={DISTANCE_MAX}
+        />
+      </div>
+      <div className="flex justify-between mt-2 px-2.5 text-[10px] text-[#94a3b8] font-medium select-none">
+        <span>{DISTANCE_MIN} mi</span>
+        <span>{DISTANCE_MAX}+ mi</span>
       </div>
     </div>
   )

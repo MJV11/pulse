@@ -105,6 +105,7 @@ returns table (
   min_ftp_pref       integer,
   max_ftp_pref       integer,
   require_ftp        boolean,
+  max_distance_miles integer,
   first_photo_path   text,
   latitude           float8,
   longitude          float8,
@@ -136,6 +137,7 @@ as $$
     ud.min_ftp_pref,
     ud.max_ftp_pref,
     ud.require_ftp,
+    ud.max_distance_miles,
     (
       select pp.storage_path
       from public.profile_photos pp

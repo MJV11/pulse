@@ -133,6 +133,21 @@ export function ProfilePage() {
     }
   }
 
+  /** Persists the user's max discovery radius in miles. */
+  async function saveDistanceMiles(miles: number) {
+    if (!session?.access_token) return
+    setError(null)
+    try {
+      await apiFetch<{ data: UserProfile }>('/users/me', session.access_token, {
+        method: 'PUT',
+        body: JSON.stringify({ max_distance_miles: miles }),
+      })
+      await refresh()
+    } catch (err) {
+      setError((err as Error).message ?? 'Something went wrong')
+    }
+  }
+
   const displayName = isEditing ? draftName : (profile?.user_name ?? null)
   const displayBio = isEditing ? draftBio : (profile?.bio ?? null)
   const displayBirthday = isEditing ? draftBirthday : (profile?.birthday ?? null)
@@ -204,10 +219,12 @@ export function ProfilePage() {
             minFtpPref={profile?.min_ftp_pref ?? 50}
             maxFtpPref={profile?.max_ftp_pref ?? 500}
             requireFtp={profile?.require_ftp ?? false}
+            maxDistanceMiles={profile?.max_distance_miles ?? 50}
             isLoading={loading}
             onLookingForChange={saveLookingFor}
             onAgePrefsChange={saveAgePrefs}
             onFtpPrefsChange={saveFtpPrefs}
+            onDistanceMilesChange={saveDistanceMiles}
           />
         </div>
 

@@ -35,6 +35,8 @@ export interface UserProfile {
    * filtered out.
    */
   require_ftp: boolean
+  /** Maximum distance in miles the user is willing to search for people (1–500, defaults to 50). */
+  max_distance_miles: number
   /** Storage path of the user's first gallery photo (lowest position), or null. */
   first_photo_path: string | null
   /**

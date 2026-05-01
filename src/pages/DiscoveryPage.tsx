@@ -66,9 +66,10 @@ export function DiscoveryPage() {
   const { session } = useAuth()
   const { profile: myProfile, isPremium } = useProfile()
   const navigate = useNavigate()
-  const { users, loading, noLocation, error } = useDiscovery(50)
+  // Use the persisted preference; fall back to 50 while the profile loads.
+  const radiusMiles = myProfile?.max_distance_miles ?? 50
+  const { users, loading, noLocation, error } = useDiscovery(radiusMiles)
   const [index, setIndex] = useState(0)
-  const [radiusMiles] = useState(50)
   const [celebration, setCelebration] = useState<MatchCelebrationState | null>(null)
   const [liking, setLiking] = useState(false)
   /** Direction the active card is flying off in, or `null` when at rest. */

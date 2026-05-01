@@ -22,6 +22,10 @@ create table if not exists public.user_details (
   -- false (the default), unknown-FTP users are still shown — only known
   -- FTPs that fall outside [min_ftp_pref, max_ftp_pref] are excluded.
   require_ftp  boolean                  not null default false,
+  -- Maximum distance in miles the user is willing to search. Stored so the
+  -- preference persists across sessions and drives the discovery feed radius.
+  -- Defaults to 50 (matching the original hardcoded value).
+  max_distance_miles integer            not null default 50,
   -- Self-reported athletic performance metrics (all optional).
   ftp               integer,  -- FTP in watts (cycling/triathlon)
   mile_pace_seconds integer,  -- mile run pace in seconds (e.g. 360 = 6:00/mi)
@@ -41,6 +45,7 @@ alter table public.user_details
   add column if not exists min_ftp_pref integer not null default 50,
   add column if not exists max_ftp_pref integer not null default 500,
   add column if not exists require_ftp  boolean not null default false,
+  add column if not exists max_distance_miles integer not null default 50,
   add column if not exists ftp               integer,
   add column if not exists mile_pace_seconds integer,
   add column if not exists swim_pace_seconds integer;
@@ -74,6 +79,13 @@ alter table public.user_details
 alter table public.user_details
   add constraint user_details_age_pref_check
   check (min_age_pref >= 18 and max_age_pref <= 99 and min_age_pref <= max_age_pref);
+
+-- Distance preference: 1–500 miles, matching the API clamp in the discovery route.
+alter table public.user_details
+  drop constraint if exists user_details_distance_pref_check;
+alter table public.user_details
+  add constraint user_details_distance_pref_check
+  check (max_distance_miles >= 1 and max_distance_miles <= 500);
 
 -- FTP slider bounds match the frontend (50–500W). Drop-and-recreate so the
 -- migration stays idempotent.

@@ -50,6 +50,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
  * min_age_pref (integer 18–99), max_age_pref (integer 18–99, >= min_age_pref),
  * min_ftp_pref (integer 50–500), max_ftp_pref (integer 50–500, >= min_ftp_pref),
  * require_ftp (boolean — when true, discovery hides users without a known FTP),
+ * max_distance_miles (integer 1–500 — discovery search radius in miles),
  * ftp (integer 1–2000 — user self-reported FTP in watts),
  * mile_pace_seconds (integer 1–3600 — mile run pace in seconds),
  * swim_pace_seconds (integer 1–3600 — 100-yard freestyle pace in seconds).
@@ -58,6 +59,8 @@ const ALLOWED_GENDERS = new Set(['man', 'woman', 'nonbinary']);
 const ALLOWED_LOOKING_FOR = new Set(['man', 'woman', 'nonbinary', 'all']);
 const FTP_MIN = 50;
 const FTP_MAX = 500;
+const DISTANCE_MIN = 1;
+const DISTANCE_MAX = 500;
 
 router.put('/me', requireAuth, async (req: Request, res: Response) => {
   const { id: userId } = (req as AuthenticatedRequest).user;
@@ -74,6 +77,7 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
     min_ftp_pref,
     max_ftp_pref,
     require_ftp,
+    max_distance_miles,
     ftp,
     mile_pace_seconds,
     swim_pace_seconds,
@@ -89,6 +93,7 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
     min_ftp_pref?: unknown;
     max_ftp_pref?: unknown;
     require_ftp?: unknown;
+    max_distance_miles?: unknown;
     ftp?: unknown;
     mile_pace_seconds?: unknown;
     swim_pace_seconds?: unknown;
@@ -185,6 +190,21 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
     return;
   }
 
+  // max_distance_miles: integer in [1, 500]
+  if (max_distance_miles !== undefined) {
+    if (
+      typeof max_distance_miles !== 'number' ||
+      !Number.isInteger(max_distance_miles) ||
+      max_distance_miles < DISTANCE_MIN ||
+      max_distance_miles > DISTANCE_MAX
+    ) {
+      res.status(400).json({
+        error: { message: `\`max_distance_miles\` must be an integer between ${DISTANCE_MIN} and ${DISTANCE_MAX}` },
+      });
+      return;
+    }
+  }
+
   // Self-reported performance metrics: positive integers within generous bounds
   if (ftp !== undefined && ftp !== null) {
     if (typeof ftp !== 'number' || !Number.isInteger(ftp) || ftp <= 0 || ftp > 2000) {
@@ -254,6 +274,7 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
   if (min_ftp_pref !== undefined) patch.min_ftp_pref = min_ftp_pref;
   if (max_ftp_pref !== undefined) patch.max_ftp_pref = max_ftp_pref;
   if (require_ftp !== undefined) patch.require_ftp = require_ftp;
+  if (max_distance_miles !== undefined) patch.max_distance_miles = max_distance_miles;
   if (ftp !== undefined) patch.ftp = ftp;
   if (mile_pace_seconds !== undefined) patch.mile_pace_seconds = mile_pace_seconds;
   if (swim_pace_seconds !== undefined) patch.swim_pace_seconds = swim_pace_seconds;

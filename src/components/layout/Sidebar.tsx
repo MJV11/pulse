@@ -38,9 +38,12 @@ export function Sidebar({ variant: _variant }: SidebarProps = {}) {
     <aside className="fixed top-0 left-0 h-full w-[288px] bg-white border-r border-[#f1f5f9] flex flex-col py-8 z-30 shadow-[0px_25px_50px_-12px_rgba(127,29,29,0.05)]">
       {/* Logo */}
       <div className="px-6 pb-10">
-        <span className="text-[#dc2626] font-extrabold text-3xl leading-9">
-          Pulse
-        </span>
+        <div className="flex items-center gap-2.5">
+          <PulseIcon />
+          <span className="text-[#dc2626] font-extrabold text-3xl leading-9">
+            Pulse
+          </span>
+        </div>
       </div>
 
       {/* Nav links — identical on every page */}
@@ -73,6 +76,57 @@ export function Sidebar({ variant: _variant }: SidebarProps = {}) {
         <ProfileBottomNav />
       </div>
     </aside>
+  )
+}
+
+/**
+ * Heart logo with a white ECG/heartbeat trace clipped inside.
+ * The trace is a simplified PQRST waveform — small P bump, sharp R spike,
+ * deeper S dip, rounded T wave — giving the "pulse" metaphor at a glance.
+ */
+function PulseIcon() {
+  return (
+    <svg
+      width="34"
+      height="34"
+      viewBox="0 0 36 34"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient
+          id="pulse-icon-grad"
+          x1="0" y1="0" x2="36" y2="34"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="#d90429" />
+          <stop offset="100%" stopColor="#ff4d6d" />
+        </linearGradient>
+        <clipPath id="pulse-icon-clip">
+          <path d="M18 32 C9 26 1 19 1 12 C1 6 6 2 11 2 C14 2 17 4 18 7 C19 4 22 2 25 2 C30 2 35 6 35 12 C35 19 27 26 18 32Z" />
+        </clipPath>
+      </defs>
+
+      {/* Heart body */}
+      <path
+        d="M18 32 C9 26 1 19 1 12 C1 6 6 2 11 2 C14 2 17 4 18 7 C19 4 22 2 25 2 C30 2 35 6 35 12 C35 19 27 26 18 32Z"
+        fill="url(#pulse-icon-grad)"
+      />
+
+      {/* ECG trace — flat → spike up → spike down → flat */}
+      <g clipPath="url(#pulse-icon-clip)">
+        <path
+          d="M1,18 L15,18 L17,10 L20,24 L22,18 L35,18"
+          stroke="white"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+          strokeOpacity="0.95"
+        />
+      </g>
+    </svg>
   )
 }
 
