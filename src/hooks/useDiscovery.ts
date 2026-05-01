@@ -34,6 +34,13 @@ export interface NearbyUser {
   mile_pace_seconds: number | null
   /** User self-reported 100-yard freestyle pace in seconds, or null. */
   swim_pace_seconds: number | null
+  /**
+   * True when this candidate has already liked the authenticated user, so
+   * a like back is guaranteed to mutually match. The discovery page uses
+   * this to fire the match celebration optimistically without waiting for
+   * the `process_like` RPC round-trip to confirm.
+   */
+  likes_me: boolean
   // Forward-compatibility escape hatch for newly added user_details columns
   [key: string]: unknown
 }

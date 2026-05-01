@@ -98,6 +98,11 @@ as $$
                where s.user_id = ud.user_id
              ),
              '[]'::jsonb
+           ),
+           'likes_me', exclude_user_id is not null and exists (
+             select 1 from public.likes l
+             where l.from_user_id = ud.user_id
+               and l.to_user_id   = exclude_user_id
            )
          ) as user_data,
     (

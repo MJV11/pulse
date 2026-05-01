@@ -9,8 +9,6 @@ import { supabase } from '../lib/supabase'
 import { apiFetch } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { useProfile } from '../context/ProfileContext'
-import { gradientFor } from '../lib'
-
 interface LikeResponse {
   data: {
     matched: boolean
@@ -136,34 +134,63 @@ export function DiscoveryPage() {
     })
   }, [])
 
-  /** Shared like handler — `direction` controls the exit animation. */
+  /**
+   * Shared like handler. The discovery feed already tells us whether the
+   * candidate has liked us (`likes_me`), so we know in advance whether
+   * swiping right will produce a mutual match. We use that to fire the
+   * celebration the instant the swipe animation completes, and let the
+   * `POST /likes` round-trip record the match in the background.
+   *
+   * For non-`likes_me` candidates we fall back to the original flow — fire
+   * the request, await both it and the animation, then advance. Mutual
+   * likes that happen between feed-fetch and swipe still work; the server
+   * returns `matched: true` and we surface the celebration anyway.
+   */
   const sendLike = useCallback(
     async (direction: 'right' | 'up') => {
       if (!currentUser || !session?.access_token || liking || exitDirection) return
       setLiking(true)
       const animPromise = swipeAway(direction)
+
+      const willMatch = currentUser.likes_me === true
+      const target = currentUser // capture for the optimistic celebration
+
+      // Fire the like request — never block UI on it when we already know it'll match.
+      const likeReq = apiFetch<LikeResponse>('/likes', session.access_token, {
+        method: 'POST',
+        body: JSON.stringify({ to_user_id: target.user_id }),
+      })
+
       try {
-        const resp = await apiFetch<LikeResponse>(
-          '/likes',
-          session.access_token,
-          {
-            method: 'POST',
-            body: JSON.stringify({ to_user_id: currentUser.user_id }),
-          },
-        )
-        await animPromise
-        if (resp.data.matched && resp.data.user) {
-          const { user } = resp.data
-          const photoUrl = user.first_photo_path
-            ? supabase.storage.from('gallery').getPublicUrl(user.first_photo_path).data.publicUrl
-            : null
+        if (willMatch) {
+          await animPromise
+          const photoUrl = currentPhotos[0]
+            ?? (target.first_photo_path
+              ? supabase.storage.from('gallery').getPublicUrl(target.first_photo_path).data.publicUrl
+              : null)
           setCelebration({
-            userId: user.user_id,
-            userName: user.user_name ?? 'Someone',
+            userId: target.user_id,
+            userName: target.user_name ?? 'Someone',
             photoUrl,
           })
+          // Still observe the request so failures get logged, but we never block on it
+          likeReq.catch((err) => console.error('Background like request failed:', err))
         } else {
-          advance()
+          const resp = await likeReq
+          await animPromise
+          if (resp.data.matched && resp.data.user) {
+            const { user } = resp.data
+            const photoUrl = user.first_photo_path
+              ? supabase.storage.from('gallery').getPublicUrl(user.first_photo_path).data.publicUrl
+              : null
+            setCelebration({
+              userId: user.user_id,
+              userName: user.user_name ?? 'Someone',
+              photoUrl,
+            })
+          } else {
+            advance()
+          }
         }
       } catch (err) {
         console.error('Failed to record like:', err)
@@ -173,7 +200,7 @@ export function DiscoveryPage() {
         setLiking(false)
       }
     },
-    [currentUser, session?.access_token, liking, exitDirection, advance, swipeAway],
+    [currentUser, currentPhotos, session?.access_token, liking, exitDirection, advance, swipeAway],
   )
 
   const handleLike = useCallback(() => sendLike('right'), [sendLike])
@@ -271,7 +298,7 @@ export function DiscoveryPage() {
             so the 3:4 card never overflows on medium-height screens.
             Overhead ≈ 240px (p-12 top+bottom 96 + gap-8 32 + ActionControls 64 + hint bar 48). */}
         <div
-          className="flex flex-col items-center gap-6 md:gap-8 w-[90%] md:w-1/2"
+          className="relative flex flex-col items-center gap-6 md:gap-8 w-[90%] md:w-1/2"
           style={{ maxWidth: 'min(500px, calc((100vh - 240px) * 0.75))' }}
         >
 
@@ -353,30 +380,19 @@ export function DiscoveryPage() {
 
           {/* Active card */}
           {!loading && currentUser && index < users.length && (
-            <>
-              {index + 1 < users.length && (
-                <div
-                  className="absolute"
-                  style={{
-                    width: 'calc(100% - 96px)',
-                    aspectRatio: '3/4',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, calc(-50% + 12px)) scale(0.95)',
-                    borderRadius: 32,
-                    background: gradientForIndex(index + 1, users),
-                    zIndex: 0,
-                  }}
-                />
-              )}
-
-              <div className="relative z-10 flex flex-col items-center gap-8 w-full">
-                <div className="absolute -top-3 -right-6 bg-white rounded-full px-3 py-1 text-xs font-semibold text-[#64748b] shadow-sm">
+            <div className="flex flex-col items-center gap-8 w-full">
+              {/* Card stack: peek and active share the same relative wrapper so
+                  absolute inset-0 on the peek covers exactly the same area */}
+              <div className="relative w-full">
+                {/* Counter badge */}
+                <div className="absolute -top-3 -right-6 bg-white rounded-full px-3 py-1 text-xs font-semibold text-[#64748b] shadow-sm z-20">
                   {index + 1} / {users.length}
                 </div>
+
+                {/* Active card */}
                 <div
                   key={currentUser.user_id}
-                  className="w-full will-change-transform"
+                  className="relative z-10 w-full will-change-transform"
                   style={{
                     transform: cardTransform,
                     opacity: cardOpacity,
@@ -393,13 +409,14 @@ export function DiscoveryPage() {
                     onHeroClick={() => setExpanded((v) => !v)}
                   />
                 </div>
-                <ActionControls
-                  onLike={handleLike}
-                  onDislike={handleDislike}
-                  onRewind={isPremium && index > 0 ? handleRewind : undefined}
-                />
               </div>
-            </>
+
+              <ActionControls
+                onLike={handleLike}
+                onDislike={handleDislike}
+                onRewind={isPremium && index > 0 ? handleRewind : undefined}
+              />
+            </div>
           )}
         </div>
       </main>
@@ -462,9 +479,3 @@ function Divider() {
   return <div className="w-px h-4 bg-[#e2e8f0]" />
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function gradientForIndex(i: number, users: NearbyUser[]) {
-  const id = users[i]?.user_id ?? String(i)
-  return gradientFor(id)
-}
