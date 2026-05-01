@@ -41,6 +41,12 @@ export interface NearbyUser {
    * the `process_like` RPC round-trip to confirm.
    */
   likes_me: boolean
+  /**
+   * Storage paths for every photo this user has, ordered by position then
+   * created_at. Baked into the discovery feed so the client never has to
+   * make a separate `/users/:userId/photos` round-trip per swipe.
+   */
+  photos: string[]
   // Forward-compatibility escape hatch for newly added user_details columns
   [key: string]: unknown
 }

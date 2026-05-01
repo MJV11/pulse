@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ProfileDetailCard } from '../components/discovery/ProfileDetailCard'
 import { ActionControls } from '../components/discovery/ActionControls'
@@ -76,9 +76,7 @@ export function DiscoveryPage() {
   const [entered, setEntered] = useState(false)
 
   // ── Multi-photo support ──────────────────────────────────────────────────────
-  /** All resolved photo URLs for the currently visible card. */
-  const [currentPhotos, setCurrentPhotos] = useState<string[]>([])
-  /** Which photo in currentPhotos is being displayed. */
+  /** Which photo in the active card is being displayed. */
   const [photoIdx, setPhotoIdx] = useState(0)
 
   /** Whether the current card has been expanded to show extended details. */
@@ -86,31 +84,48 @@ export function DiscoveryPage() {
 
   const currentUser = users[index]
 
-  // Fetch all photos for the current user whenever the card changes
+  /**
+   * Photo URLs for the current card, derived directly from the discovery feed
+   * (no per-swipe round-trip). Memoised so the array reference is stable
+   * across renders that don't change the user.
+   */
+  const currentPhotos = useMemo<string[]>(() => {
+    const paths = currentUser?.photos ?? []
+    return paths.map(
+      (path) => supabase.storage.from('gallery').getPublicUrl(path).data.publicUrl,
+    )
+  }, [currentUser])
+
+  // Reset per-card UI state when the displayed user changes
   useEffect(() => {
     setPhotoIdx(0)
-    setCurrentPhotos([])
     setExpanded(false)
-    if (!currentUser || !session?.access_token) return
+  }, [currentUser?.user_id])
 
-    let cancelled = false
-    apiFetch<{ data: Array<{ storage_path: string }> }>(
-      `/users/${currentUser.user_id}/photos`,
-      session.access_token,
-    )
-      .then(({ data }) => {
-        if (cancelled) return
-        const urls = data.map(
-          (p) => supabase.storage.from('gallery').getPublicUrl(p.storage_path).data.publicUrl,
+  /**
+   * Eagerly warm the browser cache for: every photo of the current card so
+   * Space-cycling is instant, plus the *first* photo of the next two users
+   * in the queue so swiping to a new card shows the hero immediately.
+   * `new Image()` is fire-and-forget — the browser stores the response in
+   * its HTTP cache without us holding any reference.
+   */
+  useEffect(() => {
+    const urlsToWarm: string[] = []
+    for (let i = index; i < Math.min(index + 3, users.length); i++) {
+      const u = users[i]
+      if (!u?.photos?.length) continue
+      const paths = i === index ? u.photos : u.photos.slice(0, 1)
+      for (const path of paths) {
+        urlsToWarm.push(
+          supabase.storage.from('gallery').getPublicUrl(path).data.publicUrl,
         )
-        setCurrentPhotos(urls)
-      })
-      .catch(() => {
-        // Silently fall back to first_photo_path already on the profile
-      })
-
-    return () => { cancelled = true }
-  }, [currentUser?.user_id, session?.access_token])
+      }
+    }
+    for (const url of urlsToWarm) {
+      const img = new Image()
+      img.src = url
+    }
+  }, [index, users])
 
   // Run an entrance animation each time a new card lands
   useEffect(() => {

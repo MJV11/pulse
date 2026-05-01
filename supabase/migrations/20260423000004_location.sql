@@ -99,6 +99,14 @@ as $$
              ),
              '[]'::jsonb
            ),
+           'photos', coalesce(
+             (
+               select jsonb_agg(pp2.storage_path order by pp2.position asc, pp2.created_at asc)
+               from public.profile_photos pp2
+               where pp2.user_id = ud.user_id
+             ),
+             '[]'::jsonb
+           ),
            'likes_me', exclude_user_id is not null and exists (
              select 1 from public.likes l
              where l.from_user_id = ud.user_id
