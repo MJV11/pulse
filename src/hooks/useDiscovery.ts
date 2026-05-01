@@ -24,10 +24,16 @@ export interface NearbyUser {
   looking_for: 'man' | 'woman' | 'nonbinary' | 'all' | null
   first_photo_path: string | null
   distance_miles: number
-  /** Self-reported FTP from the candidate's Strava profile, or null. */
+  /** Effective FTP in watts — highest of Strava and self-reported. Null when neither source has a value. */
   strava_ftp: number | null
   /** 14-day per-sport-type activity stats. Empty array when no Strava data. */
   strava_stats: StravaSportStat[]
+  /** User self-reported FTP in watts, or null. */
+  ftp: number | null
+  /** User self-reported mile run pace in seconds, or null. */
+  mile_pace_seconds: number | null
+  /** User self-reported 100-yard freestyle pace in seconds, or null. */
+  swim_pace_seconds: number | null
   // Forward-compatibility escape hatch for newly added user_details columns
   [key: string]: unknown
 }

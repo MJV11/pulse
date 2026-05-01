@@ -2,7 +2,7 @@
 import express, { Request, Response } from 'npm:express@4.18.2';
 import { requireAuth } from '../../middlewares/auth.ts';
 import { getServiceClient } from '../../utils/supabase.ts';
-import { syncStravaStats } from '../../utils/strava.ts';
+import { syncStravaStats, getValidStravaConnection } from '../../utils/strava.ts';
 
 interface AuthenticatedRequest extends Request {
   user: { id: string; email?: string; [key: string]: unknown };
@@ -232,27 +232,27 @@ router.delete('/disconnect', requireAuth, async (req: Request, res: Response) =>
   const { id: userId } = (req as AuthenticatedRequest).user;
 
   try {
-    const { data: existing, error: fetchErr } = await supabase
-      .from('strava_connections')
-      .select('access_token')
-      .eq('user_id', userId)
-      .maybeSingle();
+    // Refresh the token first so the deauthorize call below is virtually
+    // guaranteed to authenticate. The previous implementation read the raw
+    // `access_token` from the DB and hit Strava with it — if it had expired
+    // (>= ~6h since last sync), the deauth silently 401'd and the athlete
+    // slot stayed pinned to our app on Strava's side, which then exhausts
+    // the "Single Athlete" connected-athletes quota for new apps.
+    const connection = await getValidStravaConnection(userId);
 
-    if (fetchErr) {
-      console.error('Error fetching Strava connection for disconnect:', fetchErr);
-      res.status(500).json({ error: { message: 'Failed to disconnect Strava' } });
-      return;
-    }
-
-    // Best-effort revoke at Strava — don't block the disconnect if it fails
-    if (existing?.access_token) {
-      try {
-        await fetch(STRAVA_DEAUTH_URL, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${existing.access_token}` },
-        });
-      } catch (err) {
-        console.warn('Strava deauthorize call failed (non-fatal):', err);
+    if (connection) {
+      const deauthRes = await fetch(STRAVA_DEAUTH_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${connection.access_token}` },
+      });
+      if (!deauthRes.ok) {
+        // Log but don't block — once we've gone through token refresh this
+        // should succeed; if it doesn't we've still cleaned up our side.
+        console.warn(
+          'Strava deauthorize call failed (non-fatal):',
+          deauthRes.status,
+          await deauthRes.text(),
+        );
       }
     }
 
@@ -266,6 +266,9 @@ router.delete('/disconnect', requireAuth, async (req: Request, res: Response) =>
       res.status(500).json({ error: { message: 'Failed to disconnect Strava' } });
       return;
     }
+
+    // Wipe stats too — they belong to a connection that no longer exists.
+    await supabase.from('strava_activity_stats').delete().eq('user_id', userId);
 
     res.json({ data: { connected: false } });
   } catch (err) {

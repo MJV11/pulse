@@ -25,6 +25,9 @@ export function ProfilePage() {
   const [draftBirthday, setDraftBirthday] = useState<string>('')
   const [draftSports, setDraftSports] = useState<string[]>([])
   const [draftGender, setDraftGender] = useState<Gender | null>(null)
+  const [draftFtp, setDraftFtp] = useState<number | null>(null)
+  const [draftMilePace, setDraftMilePace] = useState<number | null>(null)
+  const [draftSwimPace, setDraftSwimPace] = useState<number | null>(null)
 
   const userId = session?.user.id ?? ''
 
@@ -34,6 +37,9 @@ export function ProfilePage() {
     setDraftBirthday(profile?.birthday ?? '')
     setDraftSports(profile?.sports ?? [])
     setDraftGender(profile?.gender ?? null)
+    setDraftFtp(profile?.ftp ?? null)
+    setDraftMilePace(profile?.mile_pace_seconds ?? null)
+    setDraftSwimPace(profile?.swim_pace_seconds ?? null)
     setError(null)
     setIsEditing(true)
   }
@@ -56,6 +62,9 @@ export function ProfilePage() {
           birthday: draftBirthday || null,
           sports: draftSports,
           gender: draftGender,
+          ftp: draftFtp,
+          mile_pace_seconds: draftMilePace,
+          swim_pace_seconds: draftSwimPace,
         }),
       })
       await refresh()
@@ -127,6 +136,9 @@ export function ProfilePage() {
   const displayBirthday = isEditing ? draftBirthday : (profile?.birthday ?? null)
   const displaySports = isEditing ? draftSports : (profile?.sports ?? [])
   const displayGender = isEditing ? draftGender : (profile?.gender ?? null)
+  const displayFtp = isEditing ? draftFtp : (profile?.ftp ?? null)
+  const displayMilePace = isEditing ? draftMilePace : (profile?.mile_pace_seconds ?? null)
+  const displaySwimPace = isEditing ? draftSwimPace : (profile?.swim_pace_seconds ?? null)
 
   return (
     <main className="min-h-screen pt-24 pb-16 px-8">
@@ -163,9 +175,15 @@ export function ProfilePage() {
           />
           <InterestsCard
             sports={displaySports}
+            ftp={displayFtp}
+            milePaceSeconds={displayMilePace}
+            swimPaceSeconds={displaySwimPace}
             isEditing={isEditing}
             isLoading={loading}
             onSportsChange={setDraftSports}
+            onFtpChange={setDraftFtp}
+            onMilePaceChange={setDraftMilePace}
+            onSwimPaceChange={setDraftSwimPace}
             onEditClick={startEditing}
           />
           <MediaGallery
@@ -189,14 +207,14 @@ export function ProfilePage() {
           />
         </div>
 
-        {/* Strava panel — shown whenever the user has linked Strava (i.e. we
-            have a sync timestamp). For unconnected users we render nothing
-            and let the AccountSettings → Integrations row prompt them to
-            connect. */}
-        {profile?.strava_synced_at && (
+        {/* Performance / Strava panel — shown when the user has Strava data
+            OR has set any self-reported performance metrics. */}
+        {(profile?.strava_synced_at || profile?.ftp || profile?.mile_pace_seconds || profile?.swim_pace_seconds) && (
           <StravaActivityPanel
             ftp={profile.strava_ftp ?? null}
-            stats={profile.strava_stats ?? []}
+            stats={profile?.strava_stats ?? []}
+            milePaceSeconds={profile?.mile_pace_seconds ?? null}
+            swimPaceSeconds={profile?.swim_pace_seconds ?? null}
           />
         )}
       </div>

@@ -112,6 +112,9 @@ returns table (
   strava_ftp         integer,
   strava_synced_at   timestamptz,
   strava_stats       jsonb,
+  ftp                integer,
+  mile_pace_seconds  integer,
+  swim_pace_seconds  integer,
   created_at         timestamptz,
   updated_at         timestamptz
 )
@@ -143,7 +146,7 @@ as $$
     ST_Y(ud.location::geometry) as latitude,
     ST_X(ud.location::geometry) as longitude,
     pu.expires_at as premium_expires_at,
-    sc.ftp as strava_ftp,
+    greatest(sc.ftp, ud.ftp) as strava_ftp,
     sc.last_synced_at as strava_synced_at,
     coalesce(
       (
@@ -161,6 +164,9 @@ as $$
       ),
       '[]'::jsonb
     ) as strava_stats,
+    ud.ftp,
+    ud.mile_pace_seconds,
+    ud.swim_pace_seconds,
     ud.created_at,
     ud.updated_at
   from public.user_details ud

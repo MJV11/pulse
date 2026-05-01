@@ -49,7 +49,10 @@ router.get('/me', requireAuth, async (req: Request, res: Response) => {
  * looking_for ('man' | 'woman' | 'nonbinary' | 'all'),
  * min_age_pref (integer 18–99), max_age_pref (integer 18–99, >= min_age_pref),
  * min_ftp_pref (integer 50–500), max_ftp_pref (integer 50–500, >= min_ftp_pref),
- * require_ftp (boolean — when true, discovery hides users without a known FTP).
+ * require_ftp (boolean — when true, discovery hides users without a known FTP),
+ * ftp (integer 1–2000 — user self-reported FTP in watts),
+ * mile_pace_seconds (integer 1–3600 — mile run pace in seconds),
+ * swim_pace_seconds (integer 1–3600 — 100-yard freestyle pace in seconds).
  */
 const ALLOWED_GENDERS = new Set(['man', 'woman', 'nonbinary']);
 const ALLOWED_LOOKING_FOR = new Set(['man', 'woman', 'nonbinary', 'all']);
@@ -71,6 +74,9 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
     min_ftp_pref,
     max_ftp_pref,
     require_ftp,
+    ftp,
+    mile_pace_seconds,
+    swim_pace_seconds,
   } = req.body as {
     user_name?: string;
     bio?: string;
@@ -83,6 +89,9 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
     min_ftp_pref?: unknown;
     max_ftp_pref?: unknown;
     require_ftp?: unknown;
+    ftp?: unknown;
+    mile_pace_seconds?: unknown;
+    swim_pace_seconds?: unknown;
   };
 
   if (sports !== undefined && !Array.isArray(sports)) {
@@ -176,6 +185,38 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
     return;
   }
 
+  // Self-reported performance metrics: positive integers within generous bounds
+  if (ftp !== undefined && ftp !== null) {
+    if (typeof ftp !== 'number' || !Number.isInteger(ftp) || ftp <= 0 || ftp > 2000) {
+      res.status(400).json({ error: { message: '`ftp` must be a positive integer up to 2000' } });
+      return;
+    }
+  }
+
+  if (mile_pace_seconds !== undefined && mile_pace_seconds !== null) {
+    if (
+      typeof mile_pace_seconds !== 'number' ||
+      !Number.isInteger(mile_pace_seconds) ||
+      mile_pace_seconds <= 0 ||
+      mile_pace_seconds > 3600
+    ) {
+      res.status(400).json({ error: { message: '`mile_pace_seconds` must be a positive integer up to 3600' } });
+      return;
+    }
+  }
+
+  if (swim_pace_seconds !== undefined && swim_pace_seconds !== null) {
+    if (
+      typeof swim_pace_seconds !== 'number' ||
+      !Number.isInteger(swim_pace_seconds) ||
+      swim_pace_seconds <= 0 ||
+      swim_pace_seconds > 3600
+    ) {
+      res.status(400).json({ error: { message: '`swim_pace_seconds` must be a positive integer up to 3600' } });
+      return;
+    }
+  }
+
   // birthday must be either null (clear) or a YYYY-MM-DD string within range
   if (birthday !== undefined && birthday !== null) {
     if (typeof birthday !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) {
@@ -213,6 +254,9 @@ router.put('/me', requireAuth, async (req: Request, res: Response) => {
   if (min_ftp_pref !== undefined) patch.min_ftp_pref = min_ftp_pref;
   if (max_ftp_pref !== undefined) patch.max_ftp_pref = max_ftp_pref;
   if (require_ftp !== undefined) patch.require_ftp = require_ftp;
+  if (ftp !== undefined) patch.ftp = ftp;
+  if (mile_pace_seconds !== undefined) patch.mile_pace_seconds = mile_pace_seconds;
+  if (swim_pace_seconds !== undefined) patch.swim_pace_seconds = swim_pace_seconds;
 
   try {
     const { data, error } = await supabase

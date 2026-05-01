@@ -1,13 +1,44 @@
-import { useState, KeyboardEvent } from 'react'
+import { useState, useEffect, KeyboardEvent } from 'react'
 import { PiBicycle } from 'react-icons/pi'
 import { Button, TextInput } from '../flowbite-proxy'
 
+// Sport keyword matching — checked case-insensitively against each sport string
+const CYCLING_KW = ['cycl', 'bike', 'bicycl', 'triathlon',  'gravel']
+const RUNNING_KW = ['run', 'triathlon', 'track']
+const SWIMMING_KW = ['swim',  'triathlon']
+
+function matchesSport(sports: string[], keywords: string[]): boolean {
+  return sports.some((s) => keywords.some((k) => s.toLowerCase().includes(k)))
+}
+
+function formatPace(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function parsePace(input: string): number | null {
+  const m = input.trim().match(/^(\d{1,2}):([0-5]\d)$/)
+  if (!m) return null
+  const total = parseInt(m[1], 10) * 60 + parseInt(m[2], 10)
+  return total > 0 ? total : null
+}
+
 interface InterestsCardProps {
   sports: string[]
+  /** User self-reported FTP in watts, or null. */
+  ftp: number | null
+  /** User self-reported mile run pace in seconds, or null. */
+  milePaceSeconds: number | null
+  /** User self-reported 100-yard freestyle pace in seconds, or null. */
+  swimPaceSeconds: number | null
   isEditing: boolean
   /** When true, renders skeleton placeholders in place of the real content. */
   isLoading?: boolean
   onSportsChange: (sports: string[]) => void
+  onFtpChange: (value: number | null) => void
+  onMilePaceChange: (value: number | null) => void
+  onSwimPaceChange: (value: number | null) => void
   onEditClick: () => void
 }
 
@@ -26,12 +57,38 @@ const SPORT_SUGGESTIONS = [
 
 export function InterestsCard({
   sports,
+  ftp,
+  milePaceSeconds,
+  swimPaceSeconds,
   isEditing,
   isLoading = false,
   onSportsChange,
+  onFtpChange,
+  onMilePaceChange,
+  onSwimPaceChange,
   onEditClick,
 }: InterestsCardProps) {
   const [sportInput, setSportInput] = useState('')
+
+  // Local string state for pace/ftp inputs — kept as typed text until blur
+  const [ftpInput, setFtpInput] = useState('')
+  const [milePaceInput, setMilePaceInput] = useState('')
+  const [swimPaceInput, setSwimPaceInput] = useState('')
+
+  // Reset input strings whenever we enter edit mode so they reflect current saved values
+  useEffect(() => {
+    if (isEditing) {
+      setFtpInput(ftp != null ? String(ftp) : '')
+      setMilePaceInput(milePaceSeconds != null ? formatPace(milePaceSeconds) : '')
+      setSwimPaceInput(swimPaceSeconds != null ? formatPace(swimPaceSeconds) : '')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing])
+
+  const showFtp = matchesSport(sports, CYCLING_KW)
+  const showRunPace = matchesSport(sports, RUNNING_KW)
+  const showSwimPace = matchesSport(sports, SWIMMING_KW)
+  const hasAnyPerf = showFtp || showRunPace || showSwimPace
 
   function addSport(value: string) {
     const trimmed = value.trim()
@@ -140,6 +197,60 @@ export function InterestsCard({
                   ))}
                 </div>
               </div>
+
+              {/* Performance setters — shown when the relevant sport is selected */}
+              {hasAnyPerf && (
+                <div className="border-t border-[#fee2e2]/60 pt-3 flex flex-col gap-3">
+                  <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wide">
+                    Performance
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {showFtp && (
+                      <PerfInput
+                        label="FTP"
+                        hint="watts"
+                        value={ftpInput}
+                        placeholder="e.g. 280"
+                        onChange={setFtpInput}
+                        onCommit={() => {
+                          const n = parseInt(ftpInput, 10)
+                          const valid = Number.isFinite(n) && n > 0 && n <= 2000
+                          onFtpChange(valid ? n : null)
+                          setFtpInput(valid ? String(n) : '')
+                        }}
+                      />
+                    )}
+                    {showRunPace && (
+                      <PerfInput
+                        label="Mile pace"
+                        hint="/mi"
+                        value={milePaceInput}
+                        placeholder="e.g. 6:30"
+                        onChange={setMilePaceInput}
+                        onCommit={() => {
+                          const parsed = parsePace(milePaceInput)
+                          onMilePaceChange(parsed)
+                          setMilePaceInput(parsed != null ? formatPace(parsed) : '')
+                        }}
+                      />
+                    )}
+                    {showSwimPace && (
+                      <PerfInput
+                        label="100yd free"
+                        hint="/100yd"
+                        value={swimPaceInput}
+                        placeholder="e.g. 1:30"
+                        onChange={setSwimPaceInput}
+                        onCommit={() => {
+                          const parsed = parsePace(swimPaceInput)
+                          onSwimPaceChange(parsed)
+                          setSwimPaceInput(parsed != null ? formatPace(parsed) : '')
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <button
@@ -151,6 +262,35 @@ export function InterestsCard({
           )}
         </>
       )}
+    </div>
+  )
+}
+
+interface PerfInputProps {
+  label: string
+  hint: string
+  value: string
+  placeholder: string
+  onChange: (v: string) => void
+  onCommit: () => void
+}
+
+function PerfInput({ label, hint, value, placeholder, onChange, onCommit }: PerfInputProps) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-[#534342] font-semibold text-sm w-24 shrink-0">{label}</span>
+      <div className="flex items-center gap-1.5 flex-1">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onCommit}
+          onKeyDown={(e) => e.key === 'Enter' && onCommit()}
+          placeholder={placeholder}
+          className="w-28 border border-[#fecaca] rounded-xl px-3 py-1.5 text-[#1d1a20] text-sm outline-none focus:ring-2 focus:ring-[#dc2626]/30 placeholder:text-[#94a3b8]"
+        />
+        <span className="text-[#94a3b8] text-xs font-medium">{hint}</span>
+      </div>
     </div>
   )
 }

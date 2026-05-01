@@ -44,11 +44,16 @@ export interface UserProfile {
    */
   premium_expires_at: string | null
   /**
-   * Self-reported FTP (functional threshold power, watts) pulled from the
-   * user's Strava profile on each stats sync. `null` when Strava isn't
-   * connected or the athlete hasn't set one in Strava.
+   * Effective FTP in watts — the higher of the Strava-reported FTP and the
+   * user's self-reported FTP. `null` when neither source has a value.
    */
   strava_ftp: number | null
+  /** User self-reported FTP in watts, or null if not set. */
+  ftp: number | null
+  /** User self-reported mile run pace in seconds (e.g. 360 = 6:00/mi), or null. */
+  mile_pace_seconds: number | null
+  /** User self-reported 100-yard freestyle pace in seconds (e.g. 90 = 1:30/100yd), or null. */
+  swim_pace_seconds: number | null
   /** ISO timestamp of the last successful Strava stats sync, or null. */
   strava_synced_at: string | null
   /**

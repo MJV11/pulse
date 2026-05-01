@@ -43,6 +43,12 @@ export interface ProfileDetailUser {
   distance_miles?: number
   strava_ftp?: number | null
   strava_stats?: StravaSportStat[]
+  /** User self-reported FTP in watts, or null if not set. */
+  ftp?: number | null
+  /** User self-reported mile run pace in seconds, or null if not set. */
+  mile_pace_seconds?: number | null
+  /** User self-reported 100-yard freestyle pace in seconds, or null if not set. */
+  swim_pace_seconds?: number | null
 }
 
 export interface Conversation {

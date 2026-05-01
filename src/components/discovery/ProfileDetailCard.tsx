@@ -72,6 +72,14 @@ function initials(name: string) {
     .slice(0, 2)
 }
 
+function StravaLogoWhite({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="white" className={className} aria-hidden="true">
+      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.599h4.172L10.463 0l-7 13.828h4.172" />
+    </svg>
+  )
+}
+
 function getPublicUrl(storagePath: string): string {
   return supabase.storage.from('gallery').getPublicUrl(storagePath).data.publicUrl
 }
@@ -185,17 +193,32 @@ export function ProfileDetailCard({
 
         {/* Info overlay — name + distance + chips */}
         <div className="absolute bottom-0 left-0 right-0 px-8 pb-10 pt-8 flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-white font-extrabold text-[32px] tracking-tight leading-none">
-              {nameWithAge}
-            </h2>
-            {user.bio && (
-              <p className="text-white text-sm font-medium line-clamp-2">{user.bio}</p>
-            )}
-            {distanceLabel && (
-              <div className="flex items-center gap-2 opacity-90 text-white">
-                <MdLocationPin size={14} />
-                <span className="font-semibold text-[14px]">{distanceLabel}</span>
+          <div className="flex items-end justify-between gap-3">
+            <div className="flex flex-col gap-1 min-w-0">
+              <h2 className="text-white font-extrabold text-[32px] tracking-tight leading-none">
+                {nameWithAge}
+              </h2>
+              {user.bio && (
+                <p className="text-white text-sm font-medium line-clamp-2">{user.bio}</p>
+              )}
+              {distanceLabel && (
+                <div className="flex items-center gap-2 opacity-90 text-white">
+                  <MdLocationPin size={14} />
+                  <span className="font-semibold text-[14px]">{distanceLabel}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Strava FTP badge — always visible, even when card is collapsed */}
+            {typeof user.strava_ftp === 'number' && user.strava_ftp > 0 && (
+              <div className="shrink-0 flex flex-col items-center gap-1 backdrop-blur-md bg-[#fc4c02]/80 rounded-2xl px-3 py-2">
+                <StravaLogoWhite className="w-4 h-4" />
+                <span className="text-white font-bold text-sm tabular-nums leading-none">
+                  {user.strava_ftp}W
+                </span>
+                <span className="text-white/70 font-medium text-[9px] uppercase tracking-wide leading-none">
+                  FTP
+                </span>
               </div>
             )}
           </div>
@@ -248,6 +271,8 @@ export function ProfileDetailCard({
         <StravaActivityPanel
           ftp={user.strava_ftp ?? null}
           stats={user.strava_stats ?? []}
+          milePaceSeconds={user.mile_pace_seconds ?? null}
+          swimPaceSeconds={user.swim_pace_seconds ?? null}
           hideWhenEmpty
           thirdPerson
         />

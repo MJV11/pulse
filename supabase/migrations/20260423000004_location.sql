@@ -82,7 +82,7 @@ as $$
   select
     (to_jsonb(ud) - 'location')
       || jsonb_build_object(
-           'strava_ftp', sc.ftp,
+           'strava_ftp', greatest(sc.ftp, ud.ftp),
            'strava_stats', coalesce(
              (
                select jsonb_agg(

@@ -22,6 +22,10 @@ create table if not exists public.user_details (
   -- false (the default), unknown-FTP users are still shown — only known
   -- FTPs that fall outside [min_ftp_pref, max_ftp_pref] are excluded.
   require_ftp  boolean                  not null default false,
+  -- Self-reported athletic performance metrics (all optional).
+  ftp               integer,  -- FTP in watts (cycling/triathlon)
+  mile_pace_seconds integer,  -- mile run pace in seconds (e.g. 360 = 6:00/mi)
+  swim_pace_seconds integer,  -- 100-yard freestyle in seconds (e.g. 90 = 1:30/100yd)
   created_at  timestamptz               not null default now(),
   updated_at  timestamptz               not null default now()
 );
@@ -36,7 +40,10 @@ alter table public.user_details
   add column if not exists max_age_pref integer not null default 99,
   add column if not exists min_ftp_pref integer not null default 50,
   add column if not exists max_ftp_pref integer not null default 500,
-  add column if not exists require_ftp  boolean not null default false;
+  add column if not exists require_ftp  boolean not null default false,
+  add column if not exists ftp               integer,
+  add column if not exists mile_pace_seconds integer,
+  add column if not exists swim_pace_seconds integer;
 
 -- Sanity check: birthday can't be in the future and the user has to be a
 -- plausible human age (under 120). Drop-and-recreate so re-running this
@@ -75,6 +82,18 @@ alter table public.user_details
 alter table public.user_details
   add constraint user_details_ftp_pref_check
   check (min_ftp_pref >= 50 and max_ftp_pref <= 500 and min_ftp_pref <= max_ftp_pref);
+
+-- Self-reported performance metrics: sanity bounds only — no lower bound
+-- other than > 0, generous upper bounds to handle elite athletes.
+alter table public.user_details
+  drop constraint if exists user_details_perf_check;
+alter table public.user_details
+  add constraint user_details_perf_check
+  check (
+    (ftp               is null or (ftp               > 0 and ftp               <= 2000))
+    and (mile_pace_seconds is null or (mile_pace_seconds > 0 and mile_pace_seconds <= 3600))
+    and (swim_pace_seconds is null or (swim_pace_seconds > 0 and swim_pace_seconds <= 3600))
+  );
 
 drop trigger if exists set_user_details_updated_at on public.user_details;
 create trigger set_user_details_updated_at
