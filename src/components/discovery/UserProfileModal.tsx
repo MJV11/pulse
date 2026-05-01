@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { PiX, PiChatCircleDots, PiHeartBreak } from 'react-icons/pi'
 import type { ProfileDetailUser } from '../../lib/types'
 import { ProfileDetailCard } from './ProfileDetailCard'
 import { Button } from '../flowbite-proxy/Button'
+import { useAuth } from '../../context/AuthContext'
+import { apiFetch } from '../../lib/api'
+import { supabase } from '../../lib/supabase'
 
 interface UserProfileModalProps {
   user: ProfileDetailUser
@@ -41,19 +44,47 @@ export function UserProfileModal({
   onMessage,
   onUnmatch,
 }: UserProfileModalProps) {
+  const { session } = useAuth()
+
   /** Two-step confirm so an accidental tap doesn't nuke the match. */
   const [confirmingUnmatch, setConfirmingUnmatch] = useState(false)
   const [unmatching, setUnmatching] = useState(false)
 
-  // Esc closes the modal — keep parity with the rest of the app's modal
-  // conventions (e.g. MatchCelebration uses the same pattern).
+  /** All resolved photo URLs for this user's gallery. */
+  const [photos, setPhotos] = useState<string[]>([])
+  const [photoIdx, setPhotoIdx] = useState(0)
+
+  // Fetch the full photo gallery whenever the viewed user changes.
+  useEffect(() => {
+    if (!session?.access_token) return
+    setPhotoIdx(0)
+    apiFetch<{ data: { storage_path: string }[] }>(
+      `/users/${user.user_id}/photos`,
+      session.access_token,
+    )
+      .then(({ data }) => {
+        const urls = (data ?? []).map(
+          (p) => supabase.storage.from('gallery').getPublicUrl(p.storage_path).data.publicUrl,
+        )
+        setPhotos(urls)
+      })
+      .catch(() => setPhotos([]))
+  }, [user.user_id, session?.access_token])
+
+  const handleNextPhoto = useCallback(() => {
+    if (photos.length <= 1) return
+    setPhotoIdx((i) => (i + 1) % photos.length)
+  }, [photos.length])
+
+  // Esc closes the modal; Space advances to the next photo.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') { onClose(); return }
+      if (e.key === ' ') { e.preventDefault(); e.stopPropagation(); handleNextPhoto() }
     }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+    document.addEventListener('keydown', onKey, { capture: true })
+    return () => document.removeEventListener('keydown', onKey, { capture: true })
+  }, [onClose, handleNextPhoto])
 
   async function handleConfirmUnmatch() {
     if (!onUnmatch || unmatching) return
@@ -87,7 +118,15 @@ export function UserProfileModal({
 
         {/* Scrollable card body */}
         <div className="flex-1 overflow-y-auto rounded-3xl shadow-[0px_25px_60px_0px_rgba(0,0,0,0.3)]">
-          <ProfileDetailCard user={user} distanceLabel={distanceLabel} unbounded form={'modal'} />
+          <ProfileDetailCard
+            user={user}
+            distanceLabel={distanceLabel}
+            photos={photos}
+            photoIndex={photoIdx}
+            onHeroClick={photos.length > 1 ? handleNextPhoto : undefined}
+            unbounded
+            form="modal"
+          />
           {/* Bottom action bar (only shown when there's something to do) */}
           {(onMessage || onUnmatch) && (
             <div className="rounded-b-3xl px-6 py-4 bg-[#fbf8ff] flex flex-col gap-3">

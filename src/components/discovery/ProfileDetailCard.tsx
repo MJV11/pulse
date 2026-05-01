@@ -1,19 +1,10 @@
-import { useEffect, useState } from 'react'
+
 import { MdLocationPin } from 'react-icons/md'
-import { PiImage } from 'react-icons/pi'
-import { useAuth } from '../../context/AuthContext'
-import { apiFetch } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import { calculateAge } from '../../lib/age'
 import { gradientFor } from '../../lib'
 import type { ProfileDetailUser } from '../../lib/types'
 import { StravaActivityPanel } from '../profile/StravaActivityPanel'
-
-interface ProfilePhoto {
-  id: string
-  storage_path: string
-  position: number
-}
 
 interface ProfileDetailCardProps {
   user: ProfileDetailUser
@@ -103,10 +94,6 @@ export function ProfileDetailCard({
   onHeroClick,
   form = 'discovery',
 }: ProfileDetailCardProps) {
-  const { session } = useAuth()
-  const [galleryPhotos, setGalleryPhotos] = useState<ProfilePhoto[]>([])
-  const [galleryLoading, setGalleryLoading] = useState(true)
-
   const displayName = user.user_name ?? 'Unknown'
   const age = calculateAge(user.birthday)
   const nameWithAge = age != null ? `${displayName}, ${age}` : displayName
@@ -122,39 +109,25 @@ export function ProfileDetailCard({
   const heroPhoto = heroPhotos[photoIndex] ?? heroPhotos[0] ?? null
   const multiPhoto = heroPhotos.length > 1
 
-  useEffect(() => {
-    // Skip the gallery fetch entirely when collapsed — discovery often
-    // never expands a given card, and there's no reason to load photos we
-    // won't render. The fetch kicks off as soon as `expanded` flips to true.
-    if (!expanded || !session?.access_token) return
-    let cancelled = false
-    setGalleryLoading(true)
-    apiFetch<{ data: ProfilePhoto[] }>(
-      `/users/${user.user_id}/photos`,
-      session.access_token,
-    )
-      .then(({ data }) => {
-        if (!cancelled) setGalleryPhotos(data ?? [])
-      })
-      .catch(() => {
-        if (!cancelled) setGalleryPhotos([])
-      })
-      .finally(() => {
-        if (!cancelled) setGalleryLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [user.user_id, session?.access_token, expanded])
+  const ftp = Math.max(user.strava_ftp ?? 0, user.ftp ?? 0)
 
   return (
     <div
-      className={`${form === 'modal' ? 'rounded-t-3xl' : 'rounded-[32px]'} overflow-hidden bg-[#fbf8ff] shadow-[0px_20px_50px_0px_rgba(217,4,41,0.1)] w-full flex flex-col ${
-        unbounded || !expanded ? '' : 'max-h-[calc(100vh-280px)] overflow-y-auto'
+      className={`${form === 'modal' ? 'rounded-t-3xl' : 'rounded-[32px]'} overflow-hidden bg-[#fbf8ff] shadow-[0px_20px_50px_0px_rgba(217,4,41,0.1)] w-full ${
+        unbounded ? 'flex flex-col' : 'relative aspect-[3/4]'
       }`}
     >
-      {/* ── Hero photo (3:4 aspect) ─────────────────────────────────────── */}
+      {/* In discovery the inner div is absolutely positioned so it fills the
+          fixed-size aspect-ratio container and scrolls internally instead of
+          pushing the outer container taller when expanded. */}
+      <div className={unbounded ? 'flex flex-col' : 'absolute inset-0 overflow-y-auto flex flex-col'}>
+      {/* ── Hero photo (3:4 aspect minus 10px) ────────────────────────────── */}
       <div
-        className={`relative w-full aspect-[3/4] shrink-0 ${onHeroClick ? 'cursor-pointer' : ''}`}
-        style={!heroPhoto ? { background: gradientFor(user.user_id) } : undefined}
+        className={`relative w-full shrink-0 ${onHeroClick ? 'cursor-pointer' : ''}`}
+        style={{
+          paddingBottom: expanded ? 'calc(133.333% - 10px)' : '133.333%',
+          ...(!heroPhoto ? { background: gradientFor(user.user_id) } : {}),
+        }}
         onClick={onHeroClick}
         role={onHeroClick ? 'button' : undefined}
         tabIndex={onHeroClick ? 0 : undefined}
@@ -183,9 +156,8 @@ export function ProfileDetailCard({
             {heroPhotos.map((_, i) => (
               <div
                 key={i}
-                className={`h-1 flex-1 rounded-full transition-all duration-200 ${
-                  i === photoIndex ? 'bg-white' : 'bg-white/35'
-                }`}
+                className={`h-1 flex-1 rounded-full transition-all duration-200 ${i === photoIndex ? 'bg-white' : 'bg-white/35'
+                  }`}
               />
             ))}
           </div>
@@ -210,11 +182,11 @@ export function ProfileDetailCard({
             </div>
 
             {/* Strava FTP badge — always visible, even when card is collapsed */}
-            {typeof user.strava_ftp === 'number' && user.strava_ftp > 0 && (
+            {ftp > 0 && (
               <div className="shrink-0 flex flex-col items-center gap-1 backdrop-blur-md bg-[#fc4c02]/80 rounded-2xl px-3 py-2">
                 <StravaLogoWhite className="w-4 h-4" />
                 <span className="text-white font-bold text-sm tabular-nums leading-none">
-                  {user.strava_ftp}W
+                  {ftp}W
                 </span>
                 <span className="text-white/70 font-medium text-[9px] uppercase tracking-wide leading-none">
                   FTP
@@ -241,72 +213,44 @@ export function ProfileDetailCard({
       {/* ── Scrollable info section — only rendered when expanded so the
           collapsed card stays a pure photo hero. */}
       {expanded && (
-      <div className="flex flex-col gap-5 p-6">
-        {user.bio && (
-          <div className="bg-white rounded-2xl p-5 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.04)]">
-            <h3 className="text-[#1d1a20] font-bold text-base mb-3">About</h3>
-            <p className="text-[#534342] font-medium text-[15px] leading-relaxed">{user.bio}</p>
-          </div>
-        )}
-
-        {user.sports.length > 0 && (
-          <div className="bg-white rounded-2xl p-5 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.04)]">
-            <h3 className="text-[#1d1a20] font-bold text-base mb-3">Sports</h3>
-            <div className="flex flex-wrap gap-2">
-              {user.sports.map((sport, i) => {
-                const style = CHIP_STYLES[i % CHIP_STYLES.length]
-                return (
-                  <span
-                    key={sport}
-                    className={`${style.bg} ${style.text} font-semibold text-sm px-4 py-1.5 rounded-full`}
-                  >
-                    {sport}
-                  </span>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        <StravaActivityPanel
-          ftp={user.strava_ftp ?? null}
-          stats={user.strava_stats ?? []}
-          milePaceSeconds={user.mile_pace_seconds ?? null}
-          swimPaceSeconds={user.swim_pace_seconds ?? null}
-          hideWhenEmpty
-          thirdPerson
-        />
-
-        <div className="bg-white rounded-2xl p-5 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center gap-2 mb-3">
-            <PiImage size={17} className="text-[#dc2626]" />
-            <h3 className="text-[#1d1a20] font-bold text-base">Photos</h3>
-          </div>
-
-          {galleryLoading ? (
-            <div className="grid grid-cols-3 gap-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-[#f1f5f9] rounded-xl aspect-square animate-pulse" />
-              ))}
-            </div>
-          ) : galleryPhotos.length === 0 ? (
-            <p className="text-[#94a3b8] text-sm italic">No photos yet.</p>
-          ) : (
-            <div className="grid grid-cols-3 gap-3">
-              {galleryPhotos.map((photo) => (
-                <div key={photo.id} className="rounded-xl overflow-hidden aspect-square">
-                  <img
-                    src={getPublicUrl(photo.storage_path)}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
+        <div className="flex flex-col gap-5 p-6">
+          {user.bio && (
+            <div className="bg-white rounded-2xl p-5 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.04)]">
+              <h3 className="text-[#1d1a20] font-bold text-base mb-3">About</h3>
+              <p className="text-[#534342] font-medium text-[15px] leading-relaxed">{user.bio}</p>
             </div>
           )}
+
+          {user.sports.length > 0 && (
+            <div className="bg-white rounded-2xl p-5 shadow-[0px_4px_16px_0px_rgba(0,0,0,0.04)]">
+              <h3 className="text-[#1d1a20] font-bold text-base mb-3">Sports</h3>
+              <div className="flex flex-wrap gap-2">
+                {user.sports.map((sport, i) => {
+                  const style = CHIP_STYLES[i % CHIP_STYLES.length]
+                  return (
+                    <span
+                      key={sport}
+                      className={`${style.bg} ${style.text} font-semibold text-sm px-4 py-1.5 rounded-full`}
+                    >
+                      {sport}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <StravaActivityPanel
+            ftp={ftp}
+            stats={user.strava_stats ?? []}
+            milePaceSeconds={user.mile_pace_seconds ?? null}
+            swimPaceSeconds={user.swim_pace_seconds ?? null}
+            hideWhenEmpty
+            thirdPerson
+          />
         </div>
-      </div>
       )}
+      </div>{/* end inner scroll wrapper */}
     </div>
   )
 }

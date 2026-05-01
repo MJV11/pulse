@@ -224,9 +224,11 @@ export function MessagesPage() {
       <ConversationList
         conversations={conversations}
         recentMatches={recentMatches}
+        threads={threads}
         activeId={activeId ?? undefined}
         onSelect={openProfileFor}
         onSelectMatch={openProfileFor}
+        onConversationSelect={setActiveId}
       />
 
       {activeConversation ? (

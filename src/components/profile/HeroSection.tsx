@@ -12,6 +12,7 @@ interface HeroSectionProps {
   onNameChange: (name: string) => void
   onBirthdayChange: (birthday: string) => void
   onEditClick: () => void
+  onPreviewClick: () => void
   onSave: () => void
   onCancel: () => void
   saving: boolean
@@ -26,6 +27,7 @@ export function HeroSection({
   onNameChange,
   onBirthdayChange,
   onEditClick,
+  onPreviewClick,
   onSave,
   onCancel,
   saving,
@@ -117,6 +119,12 @@ export function HeroSection({
                 color='pulse-primary'
               >
                 Edit Profile
+              </Button>
+              <Button
+                onClick={onPreviewClick}
+                color='pulse-quaternary'
+              >
+                Preview
               </Button>
               <Button color='alt'>
                 <PiShareNetwork size={20} />

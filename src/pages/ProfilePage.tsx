@@ -5,6 +5,7 @@ import { InterestsCard } from '../components/profile/InterestsCard'
 import { MediaGallery } from '../components/profile/MediaGallery'
 import { AccountSettings } from '../components/profile/AccountSettings'
 import { StravaActivityPanel } from '../components/profile/StravaActivityPanel'
+import { UserProfileModal } from '../components/discovery/UserProfileModal'
 import { useProfile } from '../context/ProfileContext'
 import { useAuth } from '../context/AuthContext'
 import { useProfilePhotos } from '../hooks/useProfilePhotos'
@@ -28,6 +29,7 @@ export function ProfilePage() {
   const [draftFtp, setDraftFtp] = useState<number | null>(null)
   const [draftMilePace, setDraftMilePace] = useState<number | null>(null)
   const [draftSwimPace, setDraftSwimPace] = useState<number | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   const userId = session?.user.id ?? ''
 
@@ -141,6 +143,7 @@ export function ProfilePage() {
   const displaySwimPace = isEditing ? draftSwimPace : (profile?.swim_pace_seconds ?? null)
 
   return (
+    <>
     <main className="min-h-screen pt-24 pb-16 px-8">
       <div className="max-w-[896px] mx-auto flex flex-col gap-8">
         <HeroSection
@@ -151,6 +154,7 @@ export function ProfilePage() {
           onNameChange={setDraftName}
           onBirthdayChange={setDraftBirthday}
           onEditClick={startEditing}
+          onPreviewClick={() => setPreviewOpen(true)}
           onSave={saveProfile}
           onCancel={cancelEditing}
           saving={saving}
@@ -219,5 +223,26 @@ export function ProfilePage() {
         )}
       </div>
     </main>
+
+    {previewOpen && profile && (
+      <UserProfileModal
+        user={{
+          user_id:           profile.user_id,
+          user_name:         profile.user_name,
+          bio:               profile.bio,
+          birthday:          profile.birthday,
+          sports:            profile.sports,
+          rating:            profile.rating,
+          first_photo_path:  profile.first_photo_path,
+          strava_ftp:        profile.strava_ftp,
+          strava_stats:      profile.strava_stats,
+          ftp:               profile.ftp,
+          mile_pace_seconds: profile.mile_pace_seconds,
+          swim_pace_seconds: profile.swim_pace_seconds,
+        }}
+        onClose={() => setPreviewOpen(false)}
+      />
+    )}
+    </>
   )
 }
