@@ -11,8 +11,17 @@ const STRAVA_CLIENT_ID = import.meta.env.VITE_STRAVA_CLIENT_ID as string | undef
 /** Path within the SPA where Strava redirects users after authorization. */
 export const STRAVA_CALLBACK_PATH = '/integrations/strava/callback'
 
-/** Default scopes — read public profile + all activities (incl. private). */
-export const STRAVA_DEFAULT_SCOPES = 'read,activity:read_all'
+/**
+ * Default scopes:
+ *   - `read`              — public profile basics
+ *   - `activity:read_all` — private + public activity history (for the 14d stats sync)
+ *   - `profile:read_all`  — REQUIRED for the `/athlete` endpoint to return a
+ *                           DetailedAthlete (which is the only representation
+ *                           that includes `ftp`). Without this scope the
+ *                           response is a SummaryAthlete and FTP will always
+ *                           come back null on the backend.
+ */
+export const STRAVA_DEFAULT_SCOPES = 'read,activity:read_all,profile:read_all'
 
 /** Key used to round-trip the CSRF state token through sessionStorage. */
 export const STRAVA_STATE_STORAGE_KEY = 'pulse:strava-oauth-state'
