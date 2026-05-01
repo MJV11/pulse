@@ -119,14 +119,6 @@ export function InterestsCard({
           <PiBicycle size={24} className="text-[#dc2626]" />
           <h2 className="text-[#1d1a20] font-bold text-xl">Sports</h2>
         </div>
-        {!isEditing && !isLoading && (
-          <button
-            onClick={onEditClick}
-            className="text-[#dc2626] font-semibold text-sm hover:underline"
-          >
-            Edit
-          </button>
-        )}
       </div>
 
       {isLoading ? (
@@ -170,13 +162,13 @@ export function InterestsCard({
                   onChange={(e) => setSportInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Search for a sport"
-                  color="pulse"
+                  color="pulse-primary"
                   className="max-w-[200px]"
                 />
                 <Button
                   onClick={() => addSport(sportInput)}
                   color="pulse-primary"
-                  size="sm"
+                  size="md"
                 >
                   Add
                 </Button>

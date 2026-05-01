@@ -61,10 +61,12 @@ export function MessagesPage() {
     refresh: refreshConversations,
     removePartner,
   } = useConversations()
-  const { matches, unmatch } = useMatches()
+  const { matches, loading: matchesLoading, unmatch } = useMatches()
   // Initialize from router state so the chat opens immediately on navigation
   // from MatchesPage, even before conversations finish loading.
   const [activeId, setActiveId] = useState<string | null>(requestedPartnerId)
+  /** On mobile, toggles between the conversation list and the open chat. */
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>(requestedPartnerId ? 'chat' : 'list')
   const [threads, setThreads] = useState<Map<string, Message[]>>(new Map())
   const [threadLoading, setThreadLoading] = useState(false)
   // Profile detail modal — opens when the user taps any face in this page.
@@ -151,12 +153,19 @@ export function MessagesPage() {
     [unmatch, removePartner, activeId],
   )
 
-  // Auto-select the first real conversation once loaded
+  // Auto-select the first real conversation once loaded (desktop only — on mobile
+  // we keep the list visible until the user explicitly taps a conversation).
   useEffect(() => {
     if (!activeId && conversations.size > 0) {
       setActiveId(Array.from(conversations.keys())[0])
     }
   }, [conversations, activeId])
+
+  /** Selects a conversation and, on mobile, switches to the chat panel. */
+  function handleConversationSelect(id: string) {
+    setActiveId(id)
+    setMobileView('chat')
+  }
 
   // Fetch the message thread whenever activeId changes (skip if already cached)
   useEffect(() => {
@@ -220,49 +229,58 @@ export function MessagesPage() {
   const activeMessages = (activeId ? threads.get(activeId) : undefined) ?? []
 
   return (
-    <div className="h-screen overflow-hidden flex">
-      <ConversationList
-        conversations={conversations}
-        recentMatches={recentMatches}
-        threads={threads}
-        activeId={activeId ?? undefined}
-        onSelect={openProfileFor}
-        onSelectMatch={openProfileFor}
-        onConversationSelect={setActiveId}
-      />
-
-      {activeConversation ? (
-        <ChatWindow
-          conversation={activeConversation}
-          messages={activeMessages}
-          onSend={handleSend}
-          onProfileClick={() => openProfileFor(activeConversation.id)}
+    <div className="h-[calc(100vh-3.5rem)] md:h-screen overflow-hidden flex">
+      {/* List panel — full width on mobile, fixed 384px on desktop */}
+      <div className={`${mobileView === 'chat' ? 'hidden md:flex' : 'flex'} flex-col h-full w-full md:w-auto shrink-0`}>
+        <ConversationList
+          conversations={conversations}
+          recentMatches={recentMatches}
+          threads={threads}
+          activeId={activeId ?? undefined}
+          loadingConversations={convsLoading}
+          loadingMatches={matchesLoading}
+          onSelect={openProfileFor}
+          onSelectMatch={openProfileFor}
+          onConversationSelect={handleConversationSelect}
         />
-      ) : (
-        <div className="flex-1 flex items-center justify-center">
-          {convsLoading || threadLoading ? (
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 rounded-full border-2 border-[#dc2626] border-t-transparent animate-spin" />
-              <span className="text-[#94a3b8] text-sm">Loading…</span>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-3 text-center max-w-xs">
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)' }}
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+      </div>
+
+      {/* Chat panel — hidden on mobile when list is showing */}
+      <div className={`${mobileView === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex-col h-full`}>
+        {activeConversation ? (
+          <ChatWindow
+            conversation={activeConversation}
+            messages={activeMessages}
+            onSend={handleSend}
+            onProfileClick={() => openProfileFor(activeConversation.id)}
+            onBack={() => setMobileView('list')}
+          />
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            {convsLoading || threadLoading ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 rounded-full border-2 border-[#dc2626] border-t-transparent animate-spin" />
+                <span className="text-[#94a3b8] text-sm">Loading…</span>
               </div>
-              <p className="text-[#131b2e] font-semibold">No conversations yet</p>
-              <p className="text-[#94a3b8] text-sm">
-                Match with someone in Discovery and tap their name above to say hello.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-center max-w-xs">
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #d90429 0%, #ff4d6d 100%)' }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <p className="text-[#131b2e] font-semibold">No conversations yet</p>
+                <p className="text-[#94a3b8] text-sm">
+                  Match with someone in Discovery and tap their name above to say hello.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Profile detail modal — opened from the carousel, the conversation
           list, or the chat header. Message CTA is hidden when we're already
@@ -273,7 +291,10 @@ export function MessagesPage() {
           onClose={() => setOpenProfile(null)}
           onMessage={
             openProfile.showMessageButton
-              ? () => setActiveId(openProfile.user.user_id)
+              ? () => {
+                  setActiveId(openProfile.user.user_id)
+                  setMobileView('chat')
+                }
               : undefined
           }
           onUnmatch={() => handleUnmatch(openProfile.user.user_id)}

@@ -1,23 +1,26 @@
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
+import { BottomNav } from './BottomNav'
 
 /**
- * Shared chrome for the authenticated app: fixed sidebar on the left,
- * page content on the right via `<Outlet />`. Pages render only their own
- * content — they never need to know the sidebar exists.
+ * Shared chrome for the authenticated app.
  *
- * The sidebar is `position: fixed` and 288px wide, so the content shell
- * just offsets itself with `ml-[288px]`. Pages that want full-viewport
- * height (e.g. Messages) can apply `h-screen overflow-hidden` on their
- * own root; pages that want scroll just let content grow naturally.
+ * Desktop (≥ md / 768px): fixed 288px left sidebar, content offset with `md:ml-[288px]`.
+ * Mobile (< md): sidebar is hidden, a fixed bottom tab bar provides navigation.
+ * Content gets `pb-14` on mobile so it never scrolls under the bottom nav.
+ *
+ * Pages that want full-viewport height (e.g. Messages) should use
+ * `h-[calc(100vh-3.5rem)] md:h-screen overflow-hidden` on their own root to
+ * stay bounded on both mobile and desktop.
  */
 export function AppLayout() {
   return (
     <div className="bg-[#fbf8ff] min-h-screen">
       <Sidebar />
-      <div className="ml-[288px]">
+      <div className="md:ml-[288px] pb-14 md:pb-0">
         <Outlet />
       </div>
+      <BottomNav />
     </div>
   )
 }

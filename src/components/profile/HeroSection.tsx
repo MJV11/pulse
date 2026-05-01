@@ -39,7 +39,7 @@ export function HeroSection({
   if (isLoading) {
     return (
       <div className="bg-white border border-[rgba(254,242,242,0.5)] rounded-2xl shadow-[0px_8px_30px_0px_rgba(0,0,0,0.04)] overflow-hidden">
-        <div className="p-6 flex items-end justify-between animate-pulse">
+        <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 animate-pulse">
           <div className="flex items-end gap-4 pb-2">
             <div className="h-8 w-56 bg-[#e2e8f0] rounded-lg" />
             <div className="h-4 w-24 bg-[#f1f5f9] rounded-lg" />
@@ -56,13 +56,13 @@ export function HeroSection({
   return (
     <div className="bg-white border border-[rgba(254,242,242,0.5)] rounded-2xl shadow-[0px_8px_30px_0px_rgba(0,0,0,0.04)] overflow-hidden">
       {/* Profile info row */}
-      <div className="p-6 flex items-end justify-between">
+      <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         {/* Photo + name */}
         <div className="flex items-end gap-6">
           {/* Name */}
           <div className="flex flex-row items-end gap-4">
             {isEditing ? (
-              <div className="flex flex-row items-end gap-6">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-6">
                 <TextInput
                   value={userName ?? ''}
                   onChange={(e) => onNameChange(e.target.value)}
@@ -93,7 +93,7 @@ export function HeroSection({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {isEditing ? (
             <>
               <Button

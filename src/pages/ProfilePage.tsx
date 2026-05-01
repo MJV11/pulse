@@ -159,8 +159,8 @@ export function ProfilePage() {
 
   return (
     <>
-    <main className="min-h-screen pt-24 pb-16 px-8">
-      <div className="max-w-[896px] mx-auto flex flex-col gap-8">
+    <main className="min-h-screen pt-6 md:pt-16 pb-8 md:pb-16 px-4 md:px-8">
+      <div className="max-w-[896px] mx-auto flex flex-col gap-4 md:gap-8">
         <HeroSection
           userName={displayName}
           birthday={displayBirthday}
@@ -181,7 +181,7 @@ export function ProfilePage() {
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-6">
+        <div className="flex flex-col md:grid md:grid-cols-4 gap-4 md:gap-6">
           <AboutMeCard
             bio={displayBio}
             gender={displayGender}

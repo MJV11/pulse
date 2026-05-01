@@ -14,6 +14,10 @@ const textareaTheme = {
       'border-yellow-500 bg-yellow-50 text-yellow-900 placeholder-yellow-700 focus:border-yellow-500 focus:ring-yellow-500 dark:border-yellow-400 dark:bg-yellow-100 dark:focus:border-yellow-500 dark:focus:ring-yellow-500',
     success:
       'border-green-500 bg-green-50 text-green-900 placeholder-green-700 focus:border-green-500 focus:ring-green-500 dark:border-green-400 dark:bg-green-100 dark:focus:border-green-500 dark:focus:ring-green-500',
+    'pulse-primary':
+      'border-[#fecaca] bg-white text-[#1d1a20] ' +
+      'focus:border-[#D90429] focus:ring-[#dc2626]/20 ' +
+      'placeholder:text-[#94a3b8] dark:border-gray-600 dark:bg-gray-800 dark:text-white',
   },
   withShadow: {
     on: ' dark:-light',

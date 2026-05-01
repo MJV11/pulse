@@ -1,5 +1,6 @@
 import type { Conversation } from '../../lib/types'
 import { UserAvatar } from '../common/UserAvatar'
+import { PiArrowLeft } from 'react-icons/pi'
 
 interface ChatHeaderProps {
   conversation: Conversation
@@ -8,24 +9,40 @@ interface ChatHeaderProps {
    * this handler — used by the parent to open the profile detail modal.
    */
   onProfileClick?: () => void
+  /**
+   * Mobile-only back button handler. When provided, a back arrow is shown
+   * on the left of the header (hidden on desktop) to return to the conversation list.
+   */
+  onBack?: () => void
 }
 
 /**
  * Frosted glass header bar for the active chat window.
  */
-export function ChatHeader({ conversation, onProfileClick }: ChatHeaderProps) {
+export function ChatHeader({ conversation, onProfileClick, onBack }: ChatHeaderProps) {
   return (
-    <div className="absolute top-0 left-0 right-0 h-20 backdrop-blur-md bg-white/80 border-b border-[rgba(254,226,226,0.1)] flex items-center justify-between px-8 z-10">
-      {/* Left: avatar + name + online status — clickable when onProfileClick is provided */}
-      <button
-        type="button"
-        onClick={onProfileClick}
-        disabled={!onProfileClick}
-        className={`flex items-center gap-4 -ml-2 px-2 py-1 rounded-2xl transition-colors ${
-          onProfileClick ? 'hover:bg-[#fef2f2]/40 cursor-pointer' : 'cursor-default'
-        }`}
-        aria-label={onProfileClick ? `View ${conversation.name}'s profile` : undefined}
-      >
+    <div className="h-20 shrink-0 backdrop-blur-md bg-white/80 border-b border-[rgba(254,226,226,0.1)] flex items-center justify-between px-4 md:px-8 z-10">
+      {/* Left: optional back button (mobile) + avatar + name */}
+      <div className="flex items-center gap-1">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="md:hidden -ml-1 p-2 rounded-xl text-[#64748b] hover:bg-[#fef2f2]/40 transition-colors"
+            aria-label="Back to conversations"
+          >
+            <PiArrowLeft size={20} />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onProfileClick}
+          disabled={!onProfileClick}
+          className={`flex items-center gap-4 -ml-2 px-2 py-1 rounded-2xl transition-colors ${
+            onProfileClick ? 'hover:bg-[#fef2f2]/40 cursor-pointer' : 'cursor-default'
+          }`}
+          aria-label={onProfileClick ? `View ${conversation.name}'s profile` : undefined}
+        >
         <UserAvatar
           photoUrl={conversation.avatar}
           name={conversation.name}
@@ -45,7 +62,8 @@ export function ChatHeader({ conversation, onProfileClick }: ChatHeaderProps) {
             </div>
           )}
         </div>
-      </button>
+        </button>
+      </div>
 
       {/* Right: action icons */}
       <div className="flex items-center gap-4">

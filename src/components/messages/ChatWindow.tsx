@@ -14,6 +14,10 @@ interface ChatWindowProps {
    * open the profile detail modal in the parent page.
    */
   onProfileClick?: () => void
+  /**
+   * Forwarded to the chat header as a mobile back-to-list button.
+   */
+  onBack?: () => void
 }
 
 /**
@@ -23,12 +27,12 @@ interface ChatWindowProps {
  * the date pills (`Today`, `Yesterday`, weekday, full date) line up with the
  * user's calendar rather than UTC.
  */
-export function ChatWindow({ conversation, messages, onSend, onProfileClick }: ChatWindowProps) {
+export function ChatWindow({ conversation, messages, onSend, onProfileClick, onBack }: ChatWindowProps) {
   return (
-    <div className="flex-1 bg-white relative flex flex-col h-full overflow-hidden">
-      <ChatHeader conversation={conversation} onProfileClick={onProfileClick} />
+    <div className="flex-1 bg-white flex flex-col h-full overflow-hidden">
+      <ChatHeader conversation={conversation} onProfileClick={onProfileClick} onBack={onBack} />
 
-      <div className="absolute inset-0 top-20 bottom-[124px] overflow-y-auto px-8 py-8 flex flex-col gap-3">
+      <div className="flex-1 overflow-y-auto px-6 md:px-8 py-8 flex flex-col gap-3">
         {messages.length === 0 && (
           <div className="flex justify-center mb-2">
             <span className="bg-[#f4f2ff] text-[#5c403a] text-xs font-medium px-4 py-[3px] rounded-full">

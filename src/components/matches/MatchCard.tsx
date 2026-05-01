@@ -73,13 +73,13 @@ export function MatchCard({ match, onClick }: MatchCardProps) {
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
       {/* Info overlay */}
-      <div className="absolute bottom-0 left-0 right-0 px-7 pb-8 pt-6 flex flex-col gap-3">
-        <h2 className="text-white font-extrabold text-[28px] tracking-tight leading-none">
+      <div className="absolute bottom-0 left-0 right-0 p-4 md:px-7 md:pb-8 md:pt-6 flex flex-col gap-1 md:gap-3">
+        <h2 className="text-white font-extrabold text-[20px] md:text-[28px] tracking-tight leading-none">
           {nameWithAge}
         </h2>
 
         {user.bio && (
-          <p className="text-white/75 text-[13px] font-medium line-clamp-2 leading-snug">
+          <p className="text-white/75 text-[11px] md:text-[13px] font-medium line-clamp-2 leading-snug">
             {user.bio}
           </p>
         )}
@@ -89,7 +89,7 @@ export function MatchCard({ match, onClick }: MatchCardProps) {
             {user.sports.map((sport) => (
               <span
                 key={sport}
-                className="backdrop-blur-md bg-white/10 border border-white/10 rounded-full px-[13px] py-1 text-white font-medium text-xs"
+                className="backdrop-blur-md bg-white/10 border border-white/10 rounded-full px-2 md:px-[13px] py-1 text-white font-medium text-[7px] md:text-xs"
               >
                 {sport}
               </span>

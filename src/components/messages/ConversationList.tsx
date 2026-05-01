@@ -147,6 +147,10 @@ interface ConversationListProps {
   /** Loaded message threads, keyed by partner user ID. Used for full-text search. */
   threads: Map<string, Message[]>
   activeId?: string
+  /** Shows skeleton rows while conversations are being fetched. */
+  loadingConversations?: boolean
+  /** Shows skeleton avatars in the New Matches carousel while matches are loading. */
+  loadingMatches?: boolean
   onSelect: (id: string) => void
   onSelectMatch: (userId: string) => void
   /** Called when a search result is clicked — navigates directly to that chat. */
@@ -165,6 +169,8 @@ export function ConversationList({
   recentMatches,
   threads,
   activeId,
+  loadingConversations = false,
+  loadingMatches = false,
   onSelect,
   onSelectMatch,
   onConversationSelect,
@@ -179,11 +185,13 @@ export function ConversationList({
   const isSearching = query.trim().length > 0
 
   return (
-    <div className="w-[384px] shrink-0 bg-white border-r border-[#f1f5f9] flex flex-col h-full">
+    <div className="w-full md:w-[384px] md:shrink-0 bg-white border-r border-[#f1f5f9] flex flex-col h-full">
 
       {/* ── New Matches (top section) ──────────────────────────────── */}
-      {!isSearching && recentMatches.length > 0 && (
-        <NewMatchesCarousel matches={recentMatches} onSelect={onSelectMatch} />
+      {!isSearching && (loadingMatches || recentMatches.length > 0) && (
+        loadingMatches
+          ? <NewMatchesSkeleton />
+          : <NewMatchesCarousel matches={recentMatches} onSelect={onSelectMatch} />
       )}
 
       {/* ── Messages header + search ───────────────────────────────── */}
@@ -247,20 +255,67 @@ export function ConversationList({
       ) : (
         /* ── Conversation list ──────────────────────────────────────── */
         <div className="flex-1 overflow-y-auto px-2 flex flex-col gap-1">
-          {Array.from(conversations.values()).map((conv) => (
-            <ConversationItem
-              key={conv.id}
-              conversation={conv}
-              active={conv.id === activeId}
-              onClick={() => onSelect(conv.id)}
-            />
-          ))}
+          {loadingConversations ? (
+            <ConversationListSkeleton />
+          ) : (
+            <>
+              {Array.from(conversations.values()).map((conv) => (
+                <ConversationItem
+                  key={conv.id}
+                  conversation={conv}
+                  active={conv.id === activeId}
+                  onClick={() => onConversationSelect(conv.id)}
+                  onAvatarClick={() => onSelect(conv.id)}
+                />
+              ))}
 
-          {conversations.size === 0 && (
-            <p className="text-center text-[#94a3b8] text-sm py-8">No conversations yet.</p>
+              {conversations.size === 0 && (
+                <p className="text-center text-[#94a3b8] text-sm py-8">No conversations yet.</p>
+              )}
+            </>
           )}
         </div>
       )}
     </div>
+  )
+}
+
+// ── Skeleton components ────────────────────────────────────────────────────────
+
+function NewMatchesSkeleton() {
+  return (
+    <div className="px-6 pt-5 pb-4 flex flex-col gap-3 border-b border-[#f1f5f9]">
+      {/* "New Matches" label placeholder */}
+      <div className="h-2.5 w-24 bg-[#f1f5f9] rounded-full animate-pulse" />
+      <div className="flex gap-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-[7px] shrink-0">
+            <div className="w-[52px] h-[52px] rounded-full bg-[#f1f5f9] animate-pulse" />
+            <div className="h-2 w-9 bg-[#f1f5f9] rounded-full animate-pulse" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ConversationListSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 p-4 rounded-3xl animate-pulse">
+          {/* Avatar */}
+          <div className="w-14 h-14 rounded-2xl bg-[#f1f5f9] shrink-0" />
+          {/* Text lines */}
+          <div className="flex-1 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="h-3 bg-[#f1f5f9] rounded-full" style={{ width: `${48 + (i % 3) * 16}px` }} />
+              <div className="h-2 w-8 bg-[#f1f5f9] rounded-full shrink-0" />
+            </div>
+            <div className="h-3 bg-[#f1f5f9] rounded-full" style={{ width: `${80 + (i % 4) * 20}px` }} />
+          </div>
+        </div>
+      ))}
+    </>
   )
 }

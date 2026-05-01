@@ -263,14 +263,15 @@ export function DiscoveryPage() {
   const cardOpacity = exitDirection ? 0 : entered ? 1 : 0
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <main className="max-h-[calc(100vh-53px)] flex flex-col items-center justify-center p-12 relative">
+    <div className="h-[calc(100vh-3.5rem)] md:min-h-screen overflow-hidden flex flex-col">
+      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 md:p-12 relative overflow-hidden">
         {/* Card + controls column.
-            max-width is the smaller of 500px or the height-derived limit so the
-            3:4 card never overflows the viewport on medium-height screens.
+            On mobile the card fills 90% of the viewport width.
+            On desktop max-width is the smaller of 500px or the height-derived limit
+            so the 3:4 card never overflows on medium-height screens.
             Overhead ≈ 240px (p-12 top+bottom 96 + gap-8 32 + ActionControls 64 + hint bar 48). */}
         <div
-          className="flex flex-col items-center gap-8 w-1/2"
+          className="flex flex-col items-center gap-6 md:gap-8 w-[90%] md:w-1/2"
           style={{ maxWidth: 'min(500px, calc((100vh - 240px) * 0.75))' }}
         >
 
@@ -402,8 +403,8 @@ export function DiscoveryPage() {
           )}
         </div>
       </main>
-      {/* Keyboard shortcut hint bar */}
-      <div className="flex mt-auto items-center justify-center gap-6 py-3 px-6">
+      {/* Keyboard shortcut hint bar — desktop only, no physical keyboard on mobile */}
+      <div className="hidden md:flex mt-auto items-center justify-center gap-6 py-3 px-6">
         <KeyHint keys={['←']} label="Nope" />
         <Divider />
         <KeyHint keys={['→']} label="Like" />

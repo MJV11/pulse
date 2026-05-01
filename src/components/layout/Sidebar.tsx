@@ -35,7 +35,7 @@ interface SidebarProps {
 
 export function Sidebar({ variant: _variant }: SidebarProps = {}) {
   return (
-    <aside className="fixed top-0 left-0 h-full w-[288px] bg-white border-r border-[#f1f5f9] flex flex-col py-8 z-30 shadow-[0px_25px_50px_-12px_rgba(127,29,29,0.05)]">
+    <aside className="hidden md:flex fixed top-0 left-0 h-full w-[288px] bg-white border-r border-[#f1f5f9] flex-col py-8 z-30 shadow-[0px_25px_50px_-12px_rgba(127,29,29,0.05)]">
       {/* Logo */}
       <div className="px-6 pb-10">
         <div className="flex items-center gap-2.5">

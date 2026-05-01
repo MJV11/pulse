@@ -19,9 +19,9 @@ export function MatchesPage() {
   const [openUser, setOpenUser] = useState<MatchedUser | null>(null)
 
   return (
-    <main className="min-h-screen flex flex-col p-12">
+    <main className="min-h-screen flex flex-col p-4 md:p-12">
       {/* Header */}
-      <div className="mb-10">
+      <div className="mb-6 md:mb-10">
         <h1 className="text-[#131b2e] font-extrabold text-3xl tracking-tight">Your Matches</h1>
         {!loading && !error && matches.length > 0 && (
           <p className="text-[#64748b] font-medium text-sm mt-1">
@@ -32,7 +32,7 @@ export function MatchesPage() {
 
       {/* Loading skeleton */}
       {loading && (
-        <div className="grid grid-cols-2 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-2 gap-1 md:grid-cols-4 xl:grid-cols-5 md:gap-2">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
@@ -85,7 +85,7 @@ export function MatchesPage() {
 
       {/* Matches grid */}
       {!loading && !error && matches.length > 0 && (
-        <div className="grid grid-cols-2 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-2 gap-1 md:grid-cols-4 xl:grid-cols-5 md:gap-2">
           {matches.map((match) => (
             <MatchCard
               key={match.match_id}
