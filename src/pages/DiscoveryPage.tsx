@@ -181,7 +181,7 @@ export function DiscoveryPage() {
   // it from a regular like yet, so it routes through `sendLike` with an
   // upward exit. When we add a real super-like flow, swap this for a
   // dedicated handler.
-  const handleSuperPulse = useCallback(() => sendLike('up'), [sendLike])
+  //const handleSuperPulse = useCallback(() => sendLike('up'), [sendLike])
 
   const handleDislike = useCallback(async () => {
     if (exitDirection) return
