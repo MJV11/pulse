@@ -264,14 +264,20 @@ export function DiscoveryPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <main className="min-h-[calc(100vh-53px)] flex flex-col items-center justify-center p-12 relative">
-        {/* Card + controls column */}
-        <div className="flex flex-col items-center gap-8 w-1/2 max-w-[500px]">
+      <main className="max-h-[calc(100vh-53px)] flex flex-col items-center justify-center p-12 relative">
+        {/* Card + controls column.
+            max-width is the smaller of 500px or the height-derived limit so the
+            3:4 card never overflows the viewport on medium-height screens.
+            Overhead ≈ 240px (p-12 top+bottom 96 + gap-8 32 + ActionControls 64 + hint bar 48). */}
+        <div
+          className="flex flex-col items-center gap-8 w-1/2"
+          style={{ maxWidth: 'min(500px, calc((100vh - 240px) * 0.75))' }}
+        >
 
           {/* Loading */}
           {loading && (
             <div className="flex flex-col items-center gap-4 w-full">
-              <div className="w-full aspect-[3/4] rounded-[32px] bg-[#f1f5f9] animate-pulse" />
+              <div className="w-full rounded-[32px] bg-[#f1f5f9] animate-pulse" style={{ aspectRatio: '3/4' }} />
               <p className="text-[#94a3b8] text-sm">Finding people near you…</p>
             </div>
           )}
